@@ -1,10 +1,31 @@
 const fs = require('fs')
 const path = require('path')
 
-const outputDir = path.join(__dirname, '..', 'assets', 'maps')
+const assetRoot = path.join(__dirname, '..', 'assets')
+const outputDir = path.join(assetRoot, 'maps')
 const tileSize = 16
 const mapWidth = 30
 const mapHeight = 18
+
+function toAssetPath(filePath) {
+    return path.relative(assetRoot, filePath).replaceAll(path.sep, '/')
+}
+
+function walkImages(dir) {
+    return fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
+        const entryPath = path.join(dir, entry.name)
+
+        if (entry.isDirectory()) {
+            return walkImages(entryPath)
+        }
+
+        if (!/\.(png|jpe?g)$/i.test(entry.name)) {
+            return []
+        }
+
+        return [toAssetPath(entryPath)]
+    })
+}
 
 function makeFloor(baseTile, borderTile, accentTile, accentRect) {
     return Array.from({ length: mapHeight }, (_, y) =>
@@ -24,7 +45,7 @@ function makeFloor(baseTile, borderTile, accentTile, accentRect) {
 
             if (isBorder) return borderTile
             if (inAccent) return accentTile
-            if ((x + y) % 9 === 0) return Math.max(1, baseTile - 1)
+            if ((x * 2 + y) % 11 === 0) return Math.max(1, baseTile - 1)
             return baseTile
         })
     )
@@ -68,122 +89,201 @@ function furniture(src, x, y, w, h) {
     return { src, x, y, w, h }
 }
 
-function wallCollision(x, y, w, h) {
-    return collision(x, y, w, h)
+function displaySize(src) {
+    const lower = src.toLowerCase()
+
+    if (lower.includes('background')) return { w: 48, h: 30 }
+    if (lower.includes('bigtable') || lower.includes('kitchencounters')) return { w: 54, h: 28 }
+    if (lower.includes('table') || lower.includes('sofa') || lower.includes('bench')) return { w: 46, h: 30 }
+    if (lower.includes('bed')) return { w: 42, h: 38 }
+    if (lower.includes('bookshelf') || lower.includes('shelfs') || lower.includes('fridge')) return { w: 30, h: 42 }
+    if (lower.includes('lamp') || lower.includes('clock') || lower.includes('window')) return { w: 26, h: 42 }
+    if (lower.includes('picture') || lower.includes('photo') || lower.includes('note')) return { w: 34, h: 30 }
+    if (lower.includes('tree') || lower.includes('bush') || lower.includes('fontan')) return { w: 36, h: 40 }
+    if (lower.includes('flower') || lower.includes('plant')) return { w: 30, h: 34 }
+    if (lower.includes('door')) return { w: 30, h: 42 }
+    if (lower.includes('knive') || lower.includes('blood')) return { w: 32, h: 32 }
+    return { w: 32, h: 32 }
 }
 
-const maps = [
+function placeAssets(assets, offset = 0) {
+    const xPositions = [48, 100, 152, 204, 256, 308, 360, 412]
+    const yPositions = [54, 96, 138, 184, 226]
+
+    return assets.map((src, index) => {
+        const cell = index + offset
+        const x = xPositions[cell % xPositions.length]
+        const y = yPositions[Math.floor(cell / xPositions.length) % yPositions.length]
+        const size = displaySize(src)
+
+        return furniture(src, x, y, size.w, size.h)
+    })
+}
+
+const allImages = walkImages(assetRoot).sort()
+const excluded = new Set([
+    'random/background.jpg',
+    'rooms/room1.png',
+    'rooms/room2.png',
+    'rooms/room3.png',
+    'sprites/ash.png',
+    'sprites/lia.png',
+    'characters/bogata jena.png',
+    'characters/boy.png',
+    'characters/brother.png',
+    'characters/deadbody.png',
+    'characters/dqdo.png',
+    'characters/gotvach.png',
+    'characters/gradinar.png',
+    'characters/ikonom.png',
+    'characters/ikonomka.png',
+    'characters/mehanik.png',
+    'characters/sister.png'
+])
+
+const unassigned = new Set(allImages.filter(src => !excluded.has(src)))
+const buckets = {
+    'living-room': [],
+    kitchen: [],
+    bedroom: [],
+    office: [],
+    'dining-room': [],
+    'walter-room': [],
+    'eleanor-room': [],
+    workshop: [],
+    cellar: []
+}
+
+function take(roomName, predicate) {
+    for (const src of [...unassigned]) {
+        if (predicate(src)) {
+            buckets[roomName].push(src)
+            unassigned.delete(src)
+        }
+    }
+}
+
+take('living-room', src =>
+    src.startsWith('livingroom/') ||
+    /^random\/(piano|guitar|harp|photo|photo1|photo2|picture|flower|plants|cat|cat2)\.png$/.test(src)
+)
+take('kitchen', src =>
+    src.startsWith('kitchen/') ||
+    /^random\/(kitchencounters|knive1|knivewithblood|bloodfoodsteps|foodsteps|note|notebook|table1|table2)\.png$/.test(src)
+)
+take('bedroom', src => src.startsWith('bedroom/') || src.startsWith('bathroom/'))
+take('office', src => src.startsWith('office/'))
+take('dining-room', src => src.startsWith('decor/'))
+take('walter-room', src =>
+    /^random\/(chair|door|door1open|door2|door2open|window2|lamp1|lamp2|bloodspot|bloodspot2|bloodspot3)\.png$/.test(src)
+)
+take('workshop', src => /^random\/(elevator)\.png$/.test(src))
+take('cellar', src => src.startsWith('garden/'))
+
+let roundRobin = 0
+const roomNames = Object.keys(buckets)
+for (const src of unassigned) {
+    buckets[roomNames[roundRobin % roomNames.length]].push(src)
+    roundRobin += 1
+}
+
+const mapSpecs = [
     {
         fileName: 'living-room.json',
         name: 'living-room',
         tileset: 'assets/rooms/room3.png',
         floor: makeFloor(74, 15, 121, { x: 10, y: 8, w: 8, h: 4 }),
-        wall: makeWallLayer(15),
-        furniture: [
-            furniture('random/plants.png', 48, 40, 32, 48),
-            furniture('random/plants.png', 416, 188, 32, 48),
-            furniture('random/photo.png', 150, 42, 52, 39),
-            furniture('random/piano.png', 384, 52, 32, 48),
-            furniture('random/guitar.png', 64, 184, 16, 48),
-            furniture('random/harp.png', 336, 184, 32, 32),
-            furniture('random/picture.png', 176, 156, 109, 81),
-            furniture('random/flower.png', 280, 204, 32, 32)
-        ],
-        collisions: withIds([
-            ...roomShell(),
-            wallCollision(48, 40, 32, 48),
-            wallCollision(384, 52, 32, 48),
-            wallCollision(336, 184, 32, 32),
-            wallCollision(64, 184, 16, 48),
-            wallCollision(416, 188, 32, 48)
-        ])
+        wall: makeWallLayer(15)
     },
     {
         fileName: 'kitchen.json',
         name: 'kitchen',
         tileset: 'assets/rooms/room1.png',
         floor: makeFloor(89, 12, 109, { x: 4, y: 11, w: 10, h: 3 }),
-        wall: makeWallLayer(12),
-        furniture: [
-            furniture('bedroom/desk.png', 48, 48, 32, 32),
-            furniture('bedroom/desk.png', 80, 48, 32, 32),
-            furniture('bedroom/desk.png', 112, 48, 32, 32),
-            furniture('bedroom/desk.png', 144, 48, 32, 32),
-            furniture('bedroom/desk.png', 176, 48, 32, 32),
-            furniture('bedroom/desk.png', 208, 48, 32, 32),
-            furniture('bedroom/desk.png', 240, 48, 32, 32),
-            furniture('bedroom/desk.png', 272, 48, 32, 32),
-            furniture('bedroom/desk.png', 304, 48, 32, 32),
-            furniture('bedroom/desk.png', 336, 48, 32, 32),
-            furniture('kitchen/food.png', 64, 60, 16, 32),
-            furniture('kitchen/strawberry.png', 96, 64, 16, 16),
-            furniture('kitchen/grape.png', 120, 64, 16, 16),
-            furniture('kitchen/lemon.png', 144, 64, 16, 16),
-            furniture('random/plants.png', 400, 176, 32, 48),
-            furniture('random/note.png', 120, 178, 80, 95),
-            furniture('bedroom/chair.png', 320, 144, 32, 32),
-            furniture('bedroom/chair.png', 352, 144, 32, 32)
-        ],
-        collisions: withIds([
-            ...roomShell(),
-            wallCollision(48, 48, 320, 32),
-            wallCollision(384, 80, 32, 128),
-            wallCollision(64, 176, 64, 32),
-            wallCollision(320, 144, 64, 32),
-            wallCollision(400, 176, 32, 48)
-        ])
+        wall: makeWallLayer(12)
     },
     {
         fileName: 'bedroom.json',
         name: 'bedroom',
         tileset: 'assets/rooms/room3.png',
         floor: makeFloor(90, 28, 157, { x: 6, y: 8, w: 8, h: 4 }),
-        wall: makeWallLayer(28),
-        furniture: [
-            furniture('bedroom/queenbed.png', 64, 64, 32, 48),
-            furniture('bedroom/twobed.png', 256, 48, 48, 48),
-            furniture('bedroom/lamp.png', 400, 64, 16, 48),
-            furniture('bedroom/mirror.png', 400, 144, 16, 16),
-            furniture('random/photo1.png', 194, 58, 29, 22),
-            furniture('bedroom/doll.png', 336, 176, 32, 32),
-            furniture('bedroom/chair.png', 176, 176, 32, 32),
-            furniture('bedroom/desk.png', 160, 176, 32, 32)
-        ],
-        collisions: withIds([
-            ...roomShell(),
-            wallCollision(64, 64, 32, 48),
-            wallCollision(256, 48, 48, 48),
-            wallCollision(336, 176, 32, 32),
-            wallCollision(160, 176, 48, 32),
-            wallCollision(400, 64, 16, 48)
-        ])
+        wall: makeWallLayer(28)
     },
     {
         fileName: 'office.json',
         name: 'office',
         tileset: 'assets/rooms/room2.png',
         floor: makeFloor(73, 6, 118, { x: 11, y: 6, w: 6, h: 5 }),
-        wall: makeWallLayer(6),
-        furniture: [
-            furniture('bedroom/desk.png', 208, 64, 32, 32),
-            furniture('bedroom/chair.png', 208, 112, 32, 32),
-            furniture('bedroom/chairleft.png', 176, 112, 16, 32),
-            furniture('bedroom/chairright.png', 256, 112, 16, 32),
-            furniture('bedroom/lamp.png', 384, 56, 16, 48),
-            furniture('random/picture.png', 48, 40, 109, 81),
-            furniture('bedroom/mirror.png', 80, 184, 16, 16),
-            furniture('random/plants.png', 416, 184, 32, 48),
-            furniture('bedroom/desk.png', 64, 176, 32, 32)
-        ],
-        collisions: withIds([
-            ...roomShell(),
-            wallCollision(176, 64, 96, 80),
-            wallCollision(384, 56, 16, 48),
-            wallCollision(416, 184, 32, 48),
-            wallCollision(64, 176, 32, 32)
-        ])
+        wall: makeWallLayer(6)
+    },
+    {
+        fileName: 'dining-room.json',
+        name: 'dining-room',
+        tileset: 'assets/rooms/room1.png',
+        floor: makeFloor(96, 12, 111, { x: 9, y: 7, w: 12, h: 5 }),
+        wall: makeWallLayer(12)
+    },
+    {
+        fileName: 'walter-room.json',
+        name: 'walter-room',
+        tileset: 'assets/rooms/room2.png',
+        floor: makeFloor(82, 6, 120, { x: 6, y: 7, w: 8, h: 5 }),
+        wall: makeWallLayer(6)
+    },
+    {
+        fileName: 'eleanor-room.json',
+        name: 'eleanor-room',
+        tileset: 'assets/rooms/room3.png',
+        floor: makeFloor(92, 28, 154, { x: 14, y: 6, w: 8, h: 6 }),
+        wall: makeWallLayer(28)
+    },
+    {
+        fileName: 'workshop.json',
+        name: 'workshop',
+        tileset: 'assets/rooms/room2.png',
+        floor: makeFloor(76, 6, 119, { x: 5, y: 5, w: 20, h: 2 }),
+        wall: makeWallLayer(6)
+    },
+    {
+        fileName: 'cellar.json',
+        name: 'cellar',
+        tileset: 'assets/rooms/room1.png',
+        floor: makeFloor(86, 12, 108, { x: 3, y: 8, w: 24, h: 2 }),
+        wall: makeWallLayer(12)
     }
 ]
+
+const maps = mapSpecs.map(spec => ({
+    ...spec,
+    furniture: placeAssets(buckets[spec.name]),
+    collisions: withIds(roomShell())
+}))
+
+const defaultFurniture = placeAssets(allImages
+    .filter(src => !src.startsWith('maps/'))
+    .filter(src => !src.startsWith('sprites/'))
+    .filter(src => src !== 'random/background.jpg')
+    .slice(0, 36))
+
+maps.push({
+    fileName: 'default.json',
+    name: 'default',
+    tileset: 'assets/rooms/room3.png',
+    floor: makeFloor(74, 15, 121, { x: 4, y: 4, w: 10, h: 4 }),
+    wall: makeWallLayer(15),
+    furniture: defaultFurniture,
+    collisions: withIds(roomShell())
+})
+
+maps.push({
+    fileName: 'default_map.json',
+    name: 'default_map',
+    tileset: 'assets/rooms/room2.png',
+    floor: makeFloor(73, 6, 118, { x: 12, y: 6, w: 6, h: 5 }),
+    wall: makeWallLayer(6),
+    furniture: defaultFurniture,
+    collisions: withIds(roomShell())
+})
 
 for (const map of maps) {
     const payload = {
@@ -206,4 +306,5 @@ for (const map of maps) {
     )
 }
 
-console.log(`Generated ${maps.length} maps.`)
+const usedDecor = Object.values(buckets).reduce((sum, list) => sum + list.length, 0)
+console.log(`Generated ${maps.length} maps with ${usedDecor} scaled decorative assets.`)
