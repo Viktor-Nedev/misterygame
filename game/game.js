@@ -12,8 +12,9 @@ import EleanorRoomScene from './scenes/EleanorRoomScene.js'
 import WorkshopScene from './scenes/WorkshopScene.js'
 import CellarScene from './scenes/CellarScene.js'
 
-new Phaser.Game({
+const game = new Phaser.Game({
     type: Phaser.AUTO,
+    parent: 'game-root',
     backgroundColor: '#040712',
     scale: {
         mode: Phaser.Scale.RESIZE,
@@ -42,3 +43,7 @@ new Phaser.Game({
         CellarScene
     ]
 })
+
+if (import.meta.env.DEV) {
+    window.__BLACKWOOD_GAME__ = game
+}

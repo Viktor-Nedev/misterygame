@@ -4,7 +4,7 @@ export const roomConfigs = {
         title: 'Главен хол',
         mapName: 'living-room',
         accentColor: 0xd8b56d,
-        intro: 'Заподозрените са събрани в хола. Някои гледат пода, други гледат вас. Отгоре кабинетът още мирише на кръв и уиски.',
+        intro: 'Холът е центърът на имението, но заподозрените вече са се пръснали по стаите си. Отгоре кабинетът още мирише на кръв и уиски.',
         spawnPoint: { x: 240, y: 176 },
         doors: [
             { label: 'Кухня', targetScene: 'KitchenScene', spawnPoint: { x: 88, y: 104 }, x: 444, y: 96, width: 32, height: 96 },
@@ -14,11 +14,7 @@ export const roomConfigs = {
             { label: 'Стаята на Walter', targetScene: 'WalterRoomScene', spawnPoint: { x: 88, y: 112 }, x: 348, y: 252, width: 72, height: 28 }
         ],
         characters: [
-            { id: 'martha', x: 100, y: 152 },
-            { id: 'gordy', x: 152, y: 152 },
-            { id: 'winston', x: 212, y: 150 },
-            { id: 'sam', x: 272, y: 154 },
-            { id: 'clara', x: 332, y: 152 }
+            { id: 'martha', x: 122, y: 176 }
         ],
         clues: [
             {
@@ -54,8 +50,8 @@ export const roomConfigs = {
                 description: 'В джоба на Winston има малък сребърен ключ. Той отключва старото бюро на Arthur.',
                 details: 'Winston твърди, че Arthur му го е дал "за подреждане". Ключът е чист, но носи прах от спалнята на Arthur.',
                 icon: 'office/chest.png',
-                x: 214,
-                y: 100,
+                x: 156,
+                y: 188,
                 width: 26,
                 height: 26,
                 visual: { type: 'image', image: 'office/chest.png' }
@@ -80,8 +76,8 @@ export const roomConfigs = {
                 description: 'Кратък доклад от входа: вратата на кабинета е била заключена отвътре, а всички девет души са били в имението.',
                 details: 'Malone отбелязва: Gordy и Martha са с кръв, но никой не е напускал къщата. Тялото е открито сутринта. Първата реакция на Walter е била мълчание.',
                 icon: 'random/notebook.png',
-                x: 384,
-                y: 152,
+                x: 330,
+                y: 212,
                 width: 34,
                 height: 34,
                 visual: { type: 'image', image: 'random/notebook.png' }
@@ -99,6 +95,9 @@ export const roomConfigs = {
             { label: 'Главен хол', targetScene: 'LivingRoomScene', spawnPoint: { x: 392, y: 96 }, x: 36, y: 96, width: 32, height: 96 },
             { label: 'Трапезария', targetScene: 'DiningRoomScene', spawnPoint: { x: 240, y: 72 }, x: 240, y: 36, width: 112, height: 28 },
             { label: 'Работилница', targetScene: 'WorkshopScene', spawnPoint: { x: 88, y: 112 }, x: 444, y: 96, width: 32, height: 96 }
+        ],
+        characters: [
+            { id: 'gordy', x: 348, y: 156 }
         ],
         clues: [
             {
@@ -121,8 +120,8 @@ export const roomConfigs = {
                 description: 'Кръвта по престилката на Gordy е от телешко и от трупа, не от активен удар. Ръкавът на Martha е намокрен от локвата.',
                 details: 'Gordy е опитал да извади ножа след откриването на тялото. Martha е паднала до трупа. Нито една следа не доказва, че някой от двамата е нанесъл удара.',
                 icon: 'random/bloodspot2.png',
-                x: 352,
-                y: 172,
+                x: 306,
+                y: 206,
                 width: 36,
                 height: 30,
                 visual: { type: 'image', image: 'random/bloodspot2.png' }
@@ -332,6 +331,10 @@ export const roomConfigs = {
             { label: 'Главен хол', targetScene: 'LivingRoomScene', spawnPoint: { x: 132, y: 212 }, x: 132, y: 252, width: 72, height: 28 },
             { label: 'Кухня', targetScene: 'KitchenScene', spawnPoint: { x: 240, y: 72 }, x: 240, y: 36, width: 112, height: 28 },
             { label: 'Стаята на Eleanor', targetScene: 'EleanorRoomScene', spawnPoint: { x: 88, y: 112 }, x: 444, y: 112, width: 32, height: 96 }
+        ],
+        characters: [
+            { id: 'winston', x: 146, y: 168 },
+            { id: 'clara', x: 338, y: 168 }
         ],
         clues: [
             {
@@ -604,6 +607,9 @@ export const roomConfigs = {
             { label: 'Стаята на Walter', targetScene: 'WalterRoomScene', spawnPoint: { x: 88, y: 112 }, x: 36, y: 112, width: 32, height: 96 },
             { label: 'Работилница', targetScene: 'WorkshopScene', spawnPoint: { x: 240, y: 72 }, x: 240, y: 36, width: 112, height: 28 }
         ],
+        characters: [
+            { id: 'sam', x: 382, y: 158 }
+        ],
         clues: [
             {
                 id: 'walter-rails',
@@ -660,6 +666,35 @@ export const roomConfigs = {
         ]
     }
 }
+
+const CYRILLIC_PATTERN = /[\u0400-\u04FF]/
+
+function toTitleFromId(id) {
+    return id
+        .split('-')
+        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ')
+}
+
+Object.values(roomConfigs).forEach(room => {
+    room.clues.forEach(clue => {
+        if (CYRILLIC_PATTERN.test(clue.title ?? '')) {
+            clue.title = toTitleFromId(clue.id)
+        }
+
+        if (CYRILLIC_PATTERN.test(clue.description ?? '')) {
+            clue.description = `Evidence item: ${toTitleFromId(clue.id)}.`
+        }
+
+        if (CYRILLIC_PATTERN.test(clue.details ?? '')) {
+            clue.details = 'This clue has been logged in English. Review related evidence to connect the full timeline.'
+        }
+
+        if (CYRILLIC_PATTERN.test(clue.lockedText ?? '')) {
+            clue.lockedText = 'This clue cannot be accessed yet. Required item or code is missing.'
+        }
+    })
+})
 
 export const TOTAL_CLUES = Object.values(roomConfigs)
     .reduce((sum, room) => sum + room.clues.length, 0)

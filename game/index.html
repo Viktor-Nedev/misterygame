@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <title>Angel of the Blackwood Manor</title>
+    <link rel="icon" href="data:,">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;700&family=Libre+Baskerville:wght@400;700&family=Manrope:wght@500;700&family=Special+Elite&display=swap" rel="stylesheet">
@@ -17,6 +18,12 @@
         body {
             position: relative;
             font-family: Georgia, 'Times New Roman', serif;
+        }
+        #game-root {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
         }
         canvas {
             display: block;
@@ -67,6 +74,7 @@
     </style>
 </head>
 <body>
+    <div id="game-root"></div>
     <script type="module" src="./game.js"></script>
 </body>
 </html>

@@ -24,7 +24,7 @@ export default class MenuScene extends Phaser.Scene {
         this.grain = this.add.rectangle(0, 0, 0, 0, 0xf8f4eb, 0.035)
             .setOrigin(0, 0)
 
-        this.kicker = this.add.text(0, 0, 'Vermont, 2 ноември 1987 г.', {
+        this.kicker = this.add.text(0, 0, '', {
             fontFamily: '"Special Elite", "Courier New", monospace',
             fontSize: '18px',
             color: '#d8b56d'
@@ -39,7 +39,7 @@ export default class MenuScene extends Phaser.Scene {
             lineSpacing: -8
         }).setOrigin(0.5)
 
-        this.quote = this.add.text(0, 0, '"Истината не е която очакваш. Истината е която не смееш да кажеш."', {
+        this.quote = this.add.text(0, 0, '"Truth is not what you expect. Truth is what you fear to say."', {
             fontFamily: '"Libre Baskerville", Georgia, serif',
             fontSize: '18px',
             color: '#ead8b8',
@@ -52,7 +52,7 @@ export default class MenuScene extends Phaser.Scene {
         this.startButton = this.add.rectangle(0, 0, 316, 62, 0x2a1b12, 0.96)
             .setStrokeStyle(1, 0xd8b56d, 0.92)
             .setInteractive({ useHandCursor: true })
-        this.startLabel = this.add.text(0, 0, 'ОТВОРИ ДОСИЕТО', {
+        this.startLabel = this.add.text(0, 0, 'OPEN CASE FILE', {
             fontFamily: '"Manrope", Arial, sans-serif',
             fontSize: '16px',
             fontStyle: '800',
@@ -112,3 +112,4 @@ export default class MenuScene extends Phaser.Scene {
         })
     }
 }
+

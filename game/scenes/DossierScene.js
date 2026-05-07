@@ -49,32 +49,32 @@ export default class DossierScene extends Phaser.Scene {
 
         this.cardBody = this.add.text(0, 0, '', {
             fontFamily: '"Libre Baskerville", Georgia, serif',
-            fontSize: '17px',
+            fontSize: '15px',
             color: '#35261c',
-            lineSpacing: 10,
+            lineSpacing: 7,
             wordWrap: { width: 760 }
         }).setOrigin(0.5, 0)
 
-        this.startShadow = this.add.rectangle(0, 0, 300, 60, 0x2c2017, 0.35)
+        this.startShadow = this.add.rectangle(0, 0, 300, 56, 0x2c2017, 0.35)
             .setInteractive({ useHandCursor: true })
-        this.startButton = this.add.rectangle(0, 0, 300, 60, 0x2a1b12, 0.95)
+        this.startButton = this.add.rectangle(0, 0, 300, 56, 0x2a1b12, 0.95)
             .setStrokeStyle(1, 0xe7d8bf, 0.8)
             .setInteractive({ useHandCursor: true })
-        this.startLabel = this.add.text(0, 0, 'ВЛЕЗ В ИМЕНИЕТО', {
+        this.startLabel = this.add.text(0, 0, 'ENTER THE MANOR', {
             fontFamily: '"Manrope", Arial, sans-serif',
-            fontSize: '18px',
+            fontSize: '17px',
             fontStyle: '700',
             color: '#f8f4eb'
         }).setOrigin(0.5)
 
         const cardLines = [
-            `Жертва: ${CASE_FILE.victim}`,
-            `Място: ${CASE_FILE.location}`,
-            `Час на смъртта: ${CASE_FILE.timeOfDeath}`,
+            `Victim: ${CASE_FILE.victim}`,
+            `Location: ${CASE_FILE.location}`,
+            `Time of death: ${CASE_FILE.timeOfDeath}`,
             '',
             CASE_FILE.summary,
             '',
-            'Известни факти:',
+            'Known facts:',
             `- ${CASE_FILE.details[0]}`,
             `- ${CASE_FILE.details[1]}`,
             `- ${CASE_FILE.details[2]}`,
@@ -113,8 +113,8 @@ export default class DossierScene extends Phaser.Scene {
         this.tableGlow.setPosition(width * 0.5, height * 0.5)
         this.tableGlow.setSize(Math.min(1100, width - 50), Math.min(760, height - 50))
 
-        const folderWidth = Math.min(980, width - 120)
-        const folderHeight = Math.min(620, height - 140)
+        const folderWidth = Math.min(920, width - 140)
+        const folderHeight = Math.min(560, height - 170)
         const centerX = width / 2
         const centerY = height / 2
 
@@ -131,10 +131,10 @@ export default class DossierScene extends Phaser.Scene {
         this.caseNumber.setPosition(centerX - folderWidth * 0.19, centerY + folderHeight * 0.27)
 
         this.dossierCard.setPosition(centerX + folderWidth * 0.11, centerY)
-        this.dossierCard.setSize(folderWidth * 0.64, folderHeight * 0.82)
+        this.dossierCard.setSize(folderWidth * 0.64, folderHeight * 0.8)
         this.cardTitle.setPosition(centerX + folderWidth * 0.11, centerY - folderHeight * 0.31)
         this.cardBody.setPosition(centerX + folderWidth * 0.11, centerY - folderHeight * 0.23)
-        this.cardBody.setWordWrapWidth(folderWidth * 0.54)
+        this.cardBody.setWordWrapWidth(folderWidth * 0.5)
 
         this.startShadow.setPosition(centerX + folderWidth * 0.11, centerY + folderHeight * 0.35)
         this.startButton.setPosition(centerX + folderWidth * 0.11, centerY + folderHeight * 0.34)
@@ -148,3 +148,4 @@ export default class DossierScene extends Phaser.Scene {
         })
     }
 }
+

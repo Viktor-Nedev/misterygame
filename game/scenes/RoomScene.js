@@ -1,5 +1,6 @@
 import Phaser from 'phaser'
-import { Scene, manager } from '@tialops/maki'
+import { Scene } from '@tialops/maki'
+import { manager } from '../lib/manager.js'
 import {
     CASE_FILE,
     ENDING_OPTIONS,
@@ -28,6 +29,15 @@ const INVENTORY_SLOT_SIZE = 38
 
 function normalizeCode(value) {
     return value.replaceAll('-', '').replaceAll(' ', '').trim().toLowerCase()
+}
+
+function escapeHtml(value) {
+    return value
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;')
 }
 
 export default class RoomScene extends Scene {
@@ -183,25 +193,30 @@ export default class RoomScene extends Scene {
 
     createDoors() {
         this.doors = this.roomConfig.doors.map(door => {
-            const zone = this.add.zone(door.x, door.y, door.width, door.height)
+            const isVertical = door.height >= door.width
+            const interactionWidth = door.interactionWidth
+                ?? Math.max(door.width, isVertical ? 48 : 128)
+            const interactionHeight = door.interactionHeight
+                ?? Math.max(door.height, isVertical ? 118 : 44)
+            const zone = this.add.zone(door.x, door.y, interactionWidth, interactionHeight)
             this.physics.add.existing(zone, true)
 
-            const isVertical = door.height >= door.width
             const sprite = this.add.image(door.x, door.y, 'room-door')
                 .setDepth(5.5)
                 .setAlpha(0.96)
 
             if (isVertical) {
-                sprite.setScale(0.26, 0.3)
+                sprite.setDisplaySize(Math.max(38, door.width), Math.max(92, door.height + 22))
             } else {
-                sprite.setAngle(90).setScale(0.27, 0.34)
+                sprite.setAngle(90)
+                    .setDisplaySize(Math.max(36, door.height + 10), Math.max(108, door.width + 28))
             }
 
             const glow = this.add.rectangle(
                 door.x,
                 door.y,
-                door.width + 10,
-                door.height + 10,
+                interactionWidth + 10,
+                interactionHeight + 10,
                 0x7dd3fc,
                 0
             ).setStrokeStyle(2, 0x7dd3fc, 0).setDepth(5.4)
@@ -237,16 +252,16 @@ export default class RoomScene extends Scene {
             const zone = this.add.zone(
                 clue.x,
                 clue.y,
-                clue.interactionWidth ?? clue.width + 28,
-                clue.interactionHeight ?? clue.height + 28
+                clue.interactionWidth ?? clue.width + 18,
+                clue.interactionHeight ?? clue.height + 18
             )
             this.physics.add.existing(zone, true)
 
             const highlight = this.add.rectangle(
                 clue.x,
                 clue.y,
-                clue.width + 22,
-                clue.height + 22,
+                clue.width + 14,
+                clue.height + 14,
                 0xf8fafc,
                 0
             ).setStrokeStyle(2, 0xf8fafc, 0).setDepth(8.9)
@@ -274,7 +289,7 @@ export default class RoomScene extends Scene {
         switch (clue.visual?.type) {
         case 'image':
             visual = this.add.image(clue.x, clue.y, assetKey(clue.visual.image))
-                .setDisplaySize(clue.width, clue.height)
+                .setDisplaySize(clue.width * 0.76, clue.height * 0.76)
             break
         case 'ellipse':
             visual = this.add.ellipse(
@@ -344,13 +359,13 @@ export default class RoomScene extends Scene {
             const shadow = this.add.ellipse(character.x, character.y + 24, 34, 12, 0x020617, 0.26)
                 .setDepth(7.5)
             const sprite = this.add.image(character.x, character.y, assetKey(suspect.portrait))
-                .setDisplaySize(character.width ?? 30, character.height ?? 54)
+                .setDisplaySize(character.width ?? 20, character.height ?? 38)
                 .setDepth(8.3)
 
-            const zone = this.add.zone(character.x, character.y, 46, 66)
+            const zone = this.add.zone(character.x, character.y, 38, 56)
             this.physics.add.existing(zone, true)
 
-            const highlight = this.add.rectangle(character.x, character.y, 50, 70, 0xf8deb1, 0)
+            const highlight = this.add.rectangle(character.x, character.y, 42, 60, 0xf8deb1, 0)
                 .setStrokeStyle(2, 0xf8deb1, 0)
                 .setDepth(8.9)
 
@@ -469,7 +484,7 @@ export default class RoomScene extends Scene {
             .setScrollFactor(0)
             .setDepth(24)
 
-        this.inventoryLabel = this.add.text(0, 0, 'ИНВЕНТАР', {
+        this.inventoryLabel = this.add.text(0, 0, 'INVENTORY', {
             fontFamily: '"Manrope", Arial, sans-serif',
             fontSize: '11px',
             fontStyle: '800',
@@ -482,60 +497,66 @@ export default class RoomScene extends Scene {
             .setDepth(39)
             .setVisible(false)
 
-        this.modalShadow = this.add.rectangle(0, 0, 780, 470, 0x000000, 0.3)
+        this.modalShadow = this.add.rectangle(0, 0, 660, 400, 0x000000, 0.3)
             .setScrollFactor(0)
             .setDepth(40)
             .setVisible(false)
 
-        this.modalPaperBack = this.add.rectangle(0, 0, 736, 426, 0xf1e5d2, 0.98)
-            .setStrokeStyle(1, 0xd3b98d, 0.8)
+        this.modalPaperBack = this.add.rectangle(0, 0, 620, 360, 0x0b1220, 0.97)
+            .setStrokeStyle(1, 0x334155, 0.9)
             .setScrollFactor(0)
             .setDepth(41)
             .setVisible(false)
 
-        this.modalFolder = this.add.rectangle(0, 0, 710, 400, 0xc4a46f, 1)
-            .setStrokeStyle(1, 0x765638, 0.95)
+        this.modalFolder = this.add.rectangle(0, 0, 600, 340, 0x111827, 0.98)
+            .setStrokeStyle(1, 0x475569, 0.95)
             .setScrollFactor(0)
             .setDepth(42)
             .setVisible(false)
 
-        this.modalStamp = this.add.text(0, 0, 'BLACKWOOD FILE', {
-            fontFamily: '"Special Elite", "Courier New", monospace',
-            fontSize: '22px',
-            color: '#8d251d'
+        this.modalStamp = this.add.text(0, 0, 'EVIDENCE FILE', {
+            fontFamily: '"Manrope", Arial, sans-serif',
+            fontSize: '13px',
+            fontStyle: '700',
+            color: '#93c5fd'
         }).setOrigin(0.5).setScrollFactor(0).setDepth(43).setVisible(false)
 
         this.modalTitle = this.add.text(0, 0, '', {
             fontFamily: '"Cormorant Garamond", Georgia, serif',
-            fontSize: '34px',
+            fontSize: '28px',
             fontStyle: '700',
-            color: '#1d140d',
+            color: '#f8fafc',
             align: 'center',
-            wordWrap: { width: 600 }
+            wordWrap: { width: 500 }
         }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(43).setVisible(false)
 
         this.modalBody = this.add.text(0, 0, '', {
-            fontFamily: '"Libre Baskerville", Georgia, serif',
-            fontSize: '16px',
-            color: '#2f2419',
+            fontFamily: '"Manrope", Arial, sans-serif',
+            fontSize: '14px',
+            color: '#dbeafe',
             align: 'center',
             lineSpacing: 7,
-            wordWrap: { width: 600 }
+            wordWrap: { width: 500 }
         }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(43).setVisible(false)
 
         this.modalFooter = this.add.text(0, 0, '', {
             fontFamily: '"Manrope", Arial, sans-serif',
             fontSize: '13px',
             fontStyle: '700',
-            color: '#5b4633',
+            color: '#94a3b8',
             align: 'center',
-            wordWrap: { width: 560 }
+            wordWrap: { width: 500 }
         }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(43).setVisible(false)
 
         this.createNotesPanel()
     }
 
     createNotesPanel() {
+        if (!this.sys.game.domContainer) {
+            this.notesDom = null
+            return
+        }
+
         const savedNotes = getSavedNotes()
         this.notesDom = this.add.dom(0, 0).createFromHTML(`
             <div class="blackwood-notes">
@@ -543,7 +564,7 @@ export default class RoomScene extends Scene {
                     <span>NOTES</span>
                     <button type="button" data-close="true">Close</button>
                 </div>
-                <textarea spellcheck="false" placeholder="Алибита, кодове, връзки...">${savedNotes}</textarea>
+                <textarea spellcheck="false" placeholder="Alibis, codes, links...">${escapeHtml(savedNotes)}</textarea>
             </div>
         `)
         this.notesDom.setScrollFactor(0).setDepth(70).setVisible(false)
@@ -612,7 +633,7 @@ export default class RoomScene extends Scene {
 
             if (!canAccuse()) {
                 const needed = Math.max(0, CASE_FILE.accusationThreshold - this.clues.length)
-                this.setNotice(`Нужни са още ${needed} улики, преди да стигнете до финален избор.`, 2800)
+                this.setNotice(`You need ${needed} more clues before the final decision.`, 2800)
                 return
             }
 
@@ -664,8 +685,8 @@ export default class RoomScene extends Scene {
         if (clue.requires && !hasAllItems(clue.requires)) {
             this.showModal(
                 clue.title,
-                clue.lockedText ?? 'Тази улика още не може да бъде проверена. Липсва правилният предмет.',
-                'Натиснете E или Esc, за да продължите.',
+                clue.lockedText ?? 'This clue cannot be examined yet. A required item is missing.',
+                'Press E or Esc to continue.',
                 'clue'
             )
             return
@@ -690,13 +711,13 @@ export default class RoomScene extends Scene {
         })
 
         const statusText = isNewClue
-            ? 'Уликата е добавена в инвентара.'
-            : 'Тази улика вече е записана.'
+            ? 'Clue added to inventory.'
+            : 'This clue is already logged.'
 
         this.showModal(
             clue.title,
             `${clue.description}\n\n${clue.details ?? ''}\n\n${statusText}`,
-            'Натиснете E, F или Esc. Клик върху икона в инвентара я отваря отново.',
+            'Press E, F, or Esc. Click an inventory icon to reopen it.',
             'clue'
         )
 
@@ -712,15 +733,15 @@ export default class RoomScene extends Scene {
         }
 
         this.pendingNoteText = [
-            `Разпит: ${suspect.name} (ниво ${suspect.level})`,
+            `Interview: ${suspect.name} (level ${suspect.level})`,
             suspect.text,
-            `Алиби: ${suspect.alibi}`
+            `Alibi: ${suspect.alibi}`
         ].join('\n')
 
         this.showModal(
             `${suspect.name} - ${suspect.role}, ${suspect.age}`,
-            `${suspect.text}\n\nАлиби: ${suspect.alibi}`,
-            'Натиснете N, за да запишете в бележника. E или Esc затваря.',
+            `${suspect.text}\n\nAlibi: ${suspect.alibi}`,
+            'Press N to save this to notes. E or Esc closes.',
             'interview'
         )
     }
@@ -739,7 +760,7 @@ export default class RoomScene extends Scene {
             this.notesTextarea.value = next
         }
 
-        this.setNotice('Записано в NOTES.', 1800)
+        this.setNotice('Saved to NOTES.', 1800)
     }
 
     showCodeModal(clue) {
@@ -755,11 +776,11 @@ export default class RoomScene extends Scene {
         this.showModal(
             this.codeClue.title,
             [
-                this.codeClue.lockedText ?? 'Заключено е с код.',
+                this.codeClue.lockedText ?? 'Locked with a code.',
                 '',
-                `Въведен код: ${codePreview}`
+                `Entered code: ${codePreview}`
             ].join('\n'),
-            'Пишете цифри и тире. Enter проверява кода. Backspace трие. Esc затваря.',
+            'Type digits and dash. Enter checks, Backspace deletes, Esc closes.',
             'code'
         )
     }
@@ -778,9 +799,9 @@ export default class RoomScene extends Scene {
                 this.codeClue = null
                 this.codeInput = ''
                 this.collectClue(clue)
-                this.setNotice('Кодът е правилен.', 1800)
+                this.setNotice('Code accepted.', 1800)
             } else {
-                this.setNotice('Кодът не пасва.', 1600)
+                this.setNotice('Code does not match.', 1600)
             }
             return
         }
@@ -799,11 +820,11 @@ export default class RoomScene extends Scene {
 
     showFinalChoiceModal() {
         const truthLine = canReachTruth()
-            ? 'Имате достатъчно улики да назовете истината.'
-            : 'Можете да вземете решение, но истината още не е напълно доказана.'
+            ? 'You have enough clues to name the truth.'
+            : 'You can decide now, but the full truth is not proven yet.'
 
         this.showModal(
-            'Финален избор на детектива',
+            'Detective final decision',
             [
                 truthLine,
                 '',
@@ -812,7 +833,7 @@ export default class RoomScene extends Scene {
                 `3. ${ENDING_OPTIONS[2].label}`,
                 `4. ${ENDING_OPTIONS[3].label}`
             ].join('\n'),
-            'Натиснете 1, 2, 3 или 4. F или Esc затваря.',
+            'Press 1, 2, 3, or 4. F or Esc closes.',
             'final-choice'
         )
     }
@@ -833,7 +854,7 @@ export default class RoomScene extends Scene {
         this.showModal(
             result.title,
             result.body,
-            'Натиснете E, F или Esc, за да се върнете в имението.',
+            'Press E, F, or Esc to return to the manor.',
             'ending'
         )
 
@@ -845,7 +866,7 @@ export default class RoomScene extends Scene {
         this.showModal(
             item.title,
             `${item.description}\n\n${item.details ?? ''}`,
-            'Натиснете E или Esc, за да затворите.',
+            'Press E or Esc to close.',
             'inventory'
         )
     }
@@ -889,6 +910,11 @@ export default class RoomScene extends Scene {
     }
 
     toggleNotes(force) {
+        if (!this.notesDom) {
+            this.setNotice('Notes are not available in this mode.', 1800)
+            return
+        }
+
         const nextVisible = typeof force === 'boolean' ? force : !this.notesDom.visible
         this.notesDom.setVisible(nextVisible)
         this.notesButton.setFillStyle(nextVisible ? 0x5a2d22 : 0x2b2018, 0.96)
@@ -906,12 +932,12 @@ export default class RoomScene extends Scene {
 
         if (door.requires && !hasAllItems(door.requires)) {
             const missing = door.requires.filter(id => !hasItem(id)).length
-            this.setNotice(`Заключено. Липсват ${missing} нужни предмета или улики.`, 2600)
+            this.setNotice(`Locked. Missing ${missing} required items or clues.`, 2600)
             return
         }
 
         this.isTransitioning = true
-        this.setNotice(`Влизате в: ${door.label}...`, 1200)
+        this.setNotice(`Entering: ${door.label}...`, 1200)
         this.cameras.main.fadeOut(220, 0, 0, 0)
 
         this.time.delayedCall(230, () => {
@@ -1032,32 +1058,32 @@ export default class RoomScene extends Scene {
     }
 
     updatePrompt() {
-        let text = 'Движение: WASD/стрелки. E - действие. F - финален избор. NOTES - бележник.'
+        let text = 'Move: WASD/Arrows. E - interact. F - final decision. NOTES - notebook.'
 
         if (this.modalMode === 'code') {
-            text = 'Въведете кода и натиснете Enter.'
+            text = 'Enter the code and press Enter.'
         } else if (this.modalMode === 'final-choice') {
-            text = 'Изберете финал с 1, 2, 3 или 4.'
+            text = 'Choose an ending with 1, 2, 3, or 4.'
         } else if (this.modalMode === 'notes') {
-            text = 'Бележките се запазват автоматично.'
+            text = 'Notes are saved automatically.'
         } else if (this.modalMode) {
             text = this.modalMode === 'interview'
-                ? 'N записва разпита в NOTES. E или Esc затваря.'
-                : 'E или Esc затваря файла.'
+                ? 'N saves the interview to NOTES. E or Esc closes.'
+                : 'E or Esc closes the file.'
         } else if (this.currentCharacter) {
             const suspect = SUSPECTS[this.currentCharacter.id]
-            text = `E - разпит на ${suspect.name}.`
+            text = `E - interview ${suspect.name}.`
         } else if (this.currentClue) {
-            text = `E - оглед: ${this.currentClue.title}.`
+            text = `E - inspect: ${this.currentClue.title}.`
         } else if (this.currentDoor) {
             const locked = this.currentDoor.requires && !hasAllItems(this.currentDoor.requires)
             text = locked
-                ? `${this.currentDoor.label} е заключено.`
-                : `E - влезте в: ${this.currentDoor.label}.`
+                ? `${this.currentDoor.label} is locked.`
+                : `E - enter: ${this.currentDoor.label}.`
         } else if (canReachTruth()) {
-            text = 'Истината е доказана. Натиснете F за финалния избор.'
+            text = 'Truth is established. Press F for final decision.'
         } else if (canAccuse()) {
-            text = 'Имате достатъчно материал за избор, но част от истината може да липсва. F - финал.'
+            text = 'You can make a decision, but part of the truth may still be missing. F - final.'
         }
 
         this.promptText.setText(text)

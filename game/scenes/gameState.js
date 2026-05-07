@@ -8,21 +8,21 @@ export const CASE_FILE = {
     accusationThreshold: 18,
     totalClues: 38,
     location: 'Blackwood Manor, Vermont',
-    timeOfDeath: '2 ноември 1987 г., между 20:15 и 20:55',
-    summary: 'Пристигате в имението в 8:30 сутринта. Ситен дъжд, стара дървесина и миризма на изгоряло масло. Arthur Blackwood е намерен мъртъв в заключения си кабинет на втория етаж, с нож за филе в гърдите.',
+    timeOfDeath: 'November 2, 1987, between 20:15 and 20:55',
+    summary: 'You arrive at the manor at 8:30 AM. Light rain, old timber, and the smell of burnt oil linger in the halls. Arthur Blackwood is found dead in his locked second-floor office, a fillet knife in his chest.',
     details: [
-        'Вратата е заключена отвътре с резета, но зад камината има следи от скрит механизъм.',
-        'Готвачът Gordon Floyd и чистачката Martha White имат кръв по дрехите, но и двамата настояват, че са невинни.',
-        'Деветима заподозрени са в имението, а всяко алиби крие отделна семейна лъжа.'
+        'The office door was bolted from the inside, but there are traces of a hidden mechanism behind the fireplace.',
+        'Cook Gordon Floyd and maid Martha White have blood on their clothes, but both insist they are innocent.',
+        'Nine suspects are inside the manor, and every alibi hides a different family lie.'
     ],
-    objective: 'Съберете писмата, ключовете, кодовете и уликите от картините, отключете тунелите и изберете какво да направи детективът.',
+    objective: 'Collect letters, keys, codes, and painted clues, unlock the tunnels, and decide what the detective will do.',
     menuIntro: [
-        '"Истината не е която очакваш. Истината е която не смееш да кажеш."',
+        '"Truth is not what you expect. Truth is what you fear to say."',
         '',
-        'Вие сте детективът. Девет души са затворени в Blackwood Manor.',
-        'Мъртвецът е горе. Ножът е в гърдите му. Вратата е заключена отвътре.',
+        'You are the detective. Nine people are trapped inside Blackwood Manor.',
+        'The dead man is upstairs. The knife is still in his chest. The door is locked from the inside.',
         '',
-        'Някой е построил път през стените. Някой е чакал десет години.'
+        'Someone built a path through the walls. Someone waited ten years.'
     ].join('\n')
 }
 
