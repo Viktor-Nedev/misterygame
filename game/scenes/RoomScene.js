@@ -95,6 +95,10 @@ export default class RoomScene extends Scene {
             loadAsset(SUSPECTS[character.id]?.portrait)
         })
 
+        ;(this.roomConfig.doors ?? []).forEach(door => {
+            if (door.isElevator) loadAsset('random/elevator.png')
+        })
+
         loadAsset('characters/gradinar.png')
     }
 
@@ -122,9 +126,10 @@ export default class RoomScene extends Scene {
 
         this.lia.sprite.setPosition(this.spawnPoint.x, this.spawnPoint.y)
         this.lia.sprite.setDepth(7)
+        this.lia.sprite.setScale(0.5)
         this.lia.sprite.setCollideWorldBounds(true)
-        this.lia.sprite.body.setSize(14, 18)
-        this.lia.sprite.body.setOffset(9, 44)
+        this.lia.sprite.body.setSize(18, 22)
+        this.lia.sprite.body.setOffset(7, 30)
 
         this.physics.world.setBounds(0, 0, MAP_WIDTH, MAP_HEIGHT)
         this.physics.add.collider(
@@ -155,7 +160,9 @@ export default class RoomScene extends Scene {
 
     configureCamera() {
         const zoom = Math.min(this.scale.width / MAP_WIDTH, this.scale.height / MAP_HEIGHT)
-        this.cameras.main.setZoom(zoom)
+        // Cap zoom to avoid "huge" characters on high-res screens
+        const cappedZoom = Math.min(zoom, 2.5)
+        this.cameras.main.setZoom(cappedZoom)
         this.cameras.main.centerOn(MAP_WIDTH / 2, MAP_HEIGHT / 2)
         this.cameras.main.roundPixels = true
     }
@@ -193,33 +200,25 @@ export default class RoomScene extends Scene {
 
     createDoors() {
         this.doors = this.roomConfig.doors.map(door => {
-            const isVertical = door.height >= door.width
-            const interactionWidth = door.interactionWidth
-                ?? Math.max(door.width, isVertical ? 48 : 128)
-            const interactionHeight = door.interactionHeight
-                ?? Math.max(door.height, isVertical ? 118 : 44)
-            const zone = this.add.zone(door.x, door.y, interactionWidth, interactionHeight)
-            this.physics.add.existing(zone, true)
+            const isElevator = !!door.isElevator
+            const asset = isElevator ? assetKey('random/elevator.png') : 'room-door'
+            
+            const sprite = this.add.image(door.x, door.y, asset)
+                .setDepth(6)
+                .setDisplaySize(door.width, door.height)
 
-            const sprite = this.add.image(door.x, door.y, 'room-door')
-                .setDepth(5.5)
-                .setAlpha(0.96)
-
-            if (isVertical) {
-                sprite.setDisplaySize(Math.max(38, door.width), Math.max(92, door.height + 22))
-            } else {
-                sprite.setAngle(90)
-                    .setDisplaySize(Math.max(36, door.height + 10), Math.max(108, door.width + 28))
+            if (!isElevator && door.x < 100) {
+                // Left door - maybe flip?
+            } else if (!isElevator && door.x > 380) {
+                // Right door
             }
 
-            const glow = this.add.rectangle(
-                door.x,
-                door.y,
-                interactionWidth + 10,
-                interactionHeight + 10,
-                0x7dd3fc,
-                0
-            ).setStrokeStyle(2, 0x7dd3fc, 0).setDepth(5.4)
+            const zone = this.add.zone(door.x, door.y, door.width + 16, door.height + 16)
+            this.physics.add.existing(zone, true)
+
+            const glow = this.add.rectangle(door.x, door.y, door.width + 4, door.height + 4, 0x7dd3fc, 0)
+                .setStrokeStyle(3, 0x7dd3fc, 0)
+                .setDepth(6.1)
 
             const doorState = {
                 ...door,
@@ -239,39 +238,37 @@ export default class RoomScene extends Scene {
 
     createClueObjects() {
         this.clueObjects = this.roomConfig.clues.map(clue => {
-            const shadow = this.add.ellipse(
-                clue.x,
-                clue.y + Math.max(8, clue.height * 0.38),
-                clue.width * 0.9,
-                12,
-                0x020617,
-                0.22
-            ).setDepth(7.6)
+            const collected = this.clues.includes(clue.id)
+            let visual
 
-            const visual = this.createClueVisual(clue)
-            const zone = this.add.zone(
-                clue.x,
-                clue.y,
-                clue.interactionWidth ?? clue.width + 18,
-                clue.interactionHeight ?? clue.height + 18
-            )
+            switch (clue.visual?.type) {
+            case 'image':
+                visual = this.add.image(clue.x, clue.y, assetKey(clue.visual.image))
+                    .setDisplaySize(clue.width, clue.height)
+                break
+            default:
+                visual = this.add.rectangle(
+                    clue.x,
+                    clue.y,
+                    clue.width,
+                    clue.height,
+                    clue.color ?? 0xd8b56d,
+                    0.96
+                )
+            }
+
+            visual.setDepth(5.8)
+            this.physics.add.existing(visual, true)
+            this.physics.add.collider(this.lia.sprite, visual)
+
+            const zone = this.add.zone(clue.x, clue.y, clue.width + 16, clue.height + 16)
             this.physics.add.existing(zone, true)
-
-            const highlight = this.add.rectangle(
-                clue.x,
-                clue.y,
-                clue.width + 14,
-                clue.height + 14,
-                0xf8fafc,
-                0
-            ).setStrokeStyle(2, 0xf8fafc, 0).setDepth(8.9)
 
             const clueState = {
                 ...clue,
-                zone,
                 visual,
-                shadow,
-                highlight,
+                zone,
+                baseScale: 1,
                 lastSeenAt: -Infinity
             }
 
@@ -283,108 +280,24 @@ export default class RoomScene extends Scene {
         })
     }
 
-    createClueVisual(clue) {
-        let visual
-
-        switch (clue.visual?.type) {
-        case 'image':
-            visual = this.add.image(clue.x, clue.y, assetKey(clue.visual.image))
-                .setDisplaySize(clue.width * 0.76, clue.height * 0.76)
-            break
-        case 'ellipse':
-            visual = this.add.ellipse(
-                clue.x,
-                clue.y,
-                clue.width,
-                clue.height,
-                clue.visual.color ?? clue.color,
-                clue.visual.alpha ?? 1
-            )
-            break
-        case 'paper':
-            visual = this.add.container(clue.x, clue.y, [
-                this.add.rectangle(
-                    0,
-                    0,
-                    clue.width,
-                    clue.height,
-                    clue.visual.paperColor ?? clue.color,
-                    0.98
-                ).setStrokeStyle(2, clue.visual.edgeColor ?? 0xe5e7eb, 0.95),
-                this.add.text(
-                    0,
-                    0,
-                    clue.visual.lines ?? '',
-                    {
-                        fontFamily: '"Special Elite", "Courier New", monospace',
-                        fontSize: `${clue.visual.fontSize ?? 10}px`,
-                        color: clue.visual.textColor ?? '#0f172a',
-                        align: 'center'
-                    }
-                ).setOrigin(0.5)
-            ])
-            break
-        case 'device':
-            visual = this.add.container(clue.x, clue.y, [
-                this.add.rectangle(
-                    0,
-                    0,
-                    clue.width,
-                    clue.height,
-                    clue.visual.bodyColor ?? 0x111827,
-                    1
-                ).setStrokeStyle(2, clue.visual.edgeColor ?? 0x818cf8, 1),
-                this.add.rectangle(0, -2, clue.width - 8, clue.height - 14, 0x0f172a, 1)
-                    .setStrokeStyle(1, 0x93c5fd, 0.45),
-                this.add.circle(0, clue.height / 2 - 5, 2, 0xcbd5e1, 0.9)
-            ])
-            break
-        default:
-            visual = this.add.rectangle(
-                clue.x,
-                clue.y,
-                clue.width,
-                clue.height,
-                clue.color ?? 0xd8b56d,
-                0.96
-            )
-        }
-
-        return visual.setDepth(8.2)
-    }
-
     createCharacterObjects() {
         this.characterObjects = (this.roomConfig.characters ?? []).map(character => {
             const suspect = SUSPECTS[character.id]
-            const shadow = this.add.ellipse(character.x, character.y + 24, 34, 12, 0x020617, 0.26)
-                .setDepth(7.5)
             const sprite = this.add.image(character.x, character.y, assetKey(suspect.portrait))
-                .setDisplaySize(character.width ?? 20, character.height ?? 38)
-                .setDepth(8.3)
+                .setDepth(8.8)
+                .setDisplaySize(14, 24)
 
-            const zone = this.add.zone(character.x, character.y, 38, 56)
+            this.physics.add.existing(sprite, true)
+            this.physics.add.collider(this.lia.sprite, sprite)
+
+            const zone = this.add.zone(character.x, character.y, 42, 64)
             this.physics.add.existing(zone, true)
-
-            const highlight = this.add.rectangle(character.x, character.y, 42, 60, 0xf8deb1, 0)
-                .setStrokeStyle(2, 0xf8deb1, 0)
-                .setDepth(8.9)
-
-            const label = this.add.text(character.x, character.y + 42, suspect.name.split(' ')[0], {
-                fontFamily: '"Manrope", Arial, sans-serif',
-                fontSize: '9px',
-                fontStyle: '700',
-                color: '#f8f4eb',
-                backgroundColor: 'rgba(20, 16, 13, 0.62)',
-                padding: { x: 3, y: 1 }
-            }).setOrigin(0.5).setDepth(9)
 
             const characterState = {
                 ...character,
                 zone,
                 sprite,
-                shadow,
-                highlight,
-                label,
+                baseScale: 1,
                 lastSeenAt: -Infinity
             }
 
@@ -412,141 +325,111 @@ export default class RoomScene extends Scene {
     }
 
     createOverlay() {
-        this.vignetteTop = this.add.rectangle(0, 0, 0, 0, 0x070606, 0.55)
-            .setOrigin(0, 0)
-            .setScrollFactor(0)
-            .setDepth(20)
+        this.overlayContainer = this.add.container(0, 0).setScrollFactor(0).setDepth(40)
 
-        this.vignetteBottom = this.add.rectangle(0, 0, 0, 0, 0x070606, 0.68)
-            .setOrigin(0, 1)
-            .setScrollFactor(0)
-            .setDepth(20)
+        this.header = this.add.rectangle(0, 0, 480, 42, 0x140e0a, 0.96).setOrigin(0, 0)
+        this.overlayContainer.add(this.header)
 
-        this.headerPlate = this.add.rectangle(0, 0, 390, 64, 0x15110d, 0.92)
-            .setStrokeStyle(1, this.roomConfig.accentColor, 0.9)
-            .setScrollFactor(0)
-            .setDepth(21)
-
-        this.roomTitle = this.add.text(0, 0, '', {
-            fontFamily: '"Cormorant Garamond", Georgia, serif',
-            fontSize: '32px',
+        this.headerTitle = this.add.text(14, 10, 'Blackwood Case', {
+            fontFamily: '"Cormorant Garamond", serif',
+            fontSize: '18px',
             fontStyle: '700',
-            color: '#f8f4eb'
-        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(22)
+            color: '#d8b56d'
+        })
+        this.overlayContainer.add(this.headerTitle)
 
-        this.cluePill = this.add.rectangle(0, 0, 140, 34, 0x241a13, 0.95)
-            .setStrokeStyle(1, 0x8d7350, 0.85)
-            .setScrollFactor(0)
-            .setDepth(22)
-
-        this.clueCounterText = this.add.text(0, 0, '', {
-            fontFamily: '"Manrope", Arial, sans-serif',
-            fontSize: '13px',
-            fontStyle: '700',
-            color: '#f2e6cc'
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(23)
-
-        this.notesButton = this.add.rectangle(0, 0, 92, 36, 0x2b2018, 0.95)
-            .setStrokeStyle(1, 0xd8b56d, 0.88)
-            .setScrollFactor(0)
-            .setDepth(23)
+        this.accusationButton = this.add.rectangle(350, 21, 100, 26, 0x9f2d22, 0.8)
             .setInteractive({ useHandCursor: true })
-        this.notesButtonText = this.add.text(0, 0, 'NOTES', {
-            fontFamily: '"Manrope", Arial, sans-serif',
-            fontSize: '13px',
-            fontStyle: '800',
-            color: '#f8f4eb'
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(24)
-        this.notesButton.on('pointerdown', () => this.toggleNotes())
-
-        this.noticeText = this.add.text(0, 0, '', {
-            fontFamily: '"Manrope", Arial, sans-serif',
-            fontSize: '15px',
-            color: '#f0dcc1',
-            align: 'right',
-            wordWrap: { width: 420 }
-        }).setOrigin(1, 0).setScrollFactor(0).setDepth(22)
-
-        this.promptPlate = this.add.rectangle(0, 0, 0, 46, 0x15110d, 0.96)
-            .setStrokeStyle(1, 0x5d4933, 0.9)
-            .setScrollFactor(0)
-            .setDepth(21)
-
-        this.promptText = this.add.text(0, 0, '', {
-            fontFamily: '"Manrope", Arial, sans-serif',
-            fontSize: '15px',
-            color: '#f8f4eb',
-            align: 'center'
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(22)
-
-        this.inventoryPlate = this.add.rectangle(0, 0, 0, 54, 0x0d0a08, 0.92)
-            .setStrokeStyle(1, 0x5d4933, 0.95)
-            .setScrollFactor(0)
-            .setDepth(24)
-
-        this.inventoryLabel = this.add.text(0, 0, 'INVENTORY', {
-            fontFamily: '"Manrope", Arial, sans-serif',
+            .on('pointerdown', () => this.handleFinal())
+        
+        this.accusationText = this.add.text(350, 21, 'ACCUSE', {
+            fontFamily: 'Manrope, sans-serif',
             fontSize: '11px',
             fontStyle: '800',
-            color: '#d8b56d'
-        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(25)
+            color: '#ffffff'
+        }).setOrigin(0.5)
+        
+        this.settingsButton = this.add.rectangle(440, 21, 60, 26, 0x35261c, 0.8)
+            .setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => this.showSettings())
+        
+        this.settingsText = this.add.text(440, 21, 'SET', {
+            fontFamily: 'Manrope, sans-serif',
+            fontSize: '11px',
+            fontStyle: '800',
+            color: '#ead8b8'
+        }).setOrigin(0.5)
 
-        this.modalBackdrop = this.add.rectangle(0, 0, 0, 0, 0x050403, 0.76)
-            .setOrigin(0, 0)
-            .setScrollFactor(0)
-            .setDepth(39)
-            .setVisible(false)
+        this.overlayContainer.add([this.accusationButton, this.accusationText, this.settingsButton, this.settingsText])
 
-        this.modalShadow = this.add.rectangle(0, 0, 660, 400, 0x000000, 0.3)
-            .setScrollFactor(0)
-            .setDepth(40)
-            .setVisible(false)
+        this.inventoryBar = this.add.rectangle(0, 288, 480, 42, 0x140e0a, 0.92).setOrigin(0, 1)
+        this.overlayContainer.add(this.inventoryBar)
 
-        this.modalPaperBack = this.add.rectangle(0, 0, 620, 360, 0x0b1220, 0.97)
-            .setStrokeStyle(1, 0x334155, 0.9)
-            .setScrollFactor(0)
-            .setDepth(41)
-            .setVisible(false)
+        this.promptText = this.add.text(14, 274, '', {
+            fontFamily: '"Manrope", sans-serif',
+            fontSize: '11px',
+            color: '#94a3b8'
+        }).setOrigin(0, 1)
+        this.overlayContainer.add(this.promptText)
 
-        this.modalFolder = this.add.rectangle(0, 0, 600, 340, 0x111827, 0.98)
-            .setStrokeStyle(1, 0x475569, 0.95)
+        this.noticeText = this.add.text(466, 54, '', {
+            fontFamily: '"Manrope", sans-serif',
+            fontSize: '12px',
+            color: '#f0dcc1',
+            align: 'right',
+            wordWrap: { width: 300 }
+        }).setOrigin(1, 0).setScrollFactor(0).setDepth(45)
+
+        this.modalBackdrop = this.add.rectangle(240, 144, 480, 288, 0x000000, 0.62)
+            .setScrollFactor(0).setDepth(41).setVisible(false)
+
+        this.modalShadow = this.add.rectangle(244, 148, 474, 294, 0x000000, 0.3)
+            .setScrollFactor(0).setDepth(41.5).setVisible(false)
+
+        this.modalPaperBack = this.add.rectangle(240, 144, 460, 280, 0xffffff, 0.1)
+            .setScrollFactor(0).setDepth(41.8).setVisible(false)
+
+        this.modalFolder = this.add.rectangle(240, 144, 470, 290, 0xfdfbf7, 1)
+            .setStrokeStyle(1, 0xc1b299, 0.6)
             .setScrollFactor(0)
             .setDepth(42)
             .setVisible(false)
 
-        this.modalStamp = this.add.text(0, 0, 'EVIDENCE FILE', {
-            fontFamily: '"Manrope", Arial, sans-serif',
-            fontSize: '13px',
+        this.modalStamp = this.add.text(240, 60, 'EVIDENCE FILE', {
+            fontFamily: '"Special Elite", "Courier New", monospace',
+            fontSize: '14px',
             fontStyle: '700',
-            color: '#93c5fd'
+            color: '#9f2d22'
         }).setOrigin(0.5).setScrollFactor(0).setDepth(43).setVisible(false)
 
-        this.modalTitle = this.add.text(0, 0, '', {
+        this.modalTitle = this.add.text(240, 85, '', {
             fontFamily: '"Cormorant Garamond", Georgia, serif',
-            fontSize: '28px',
+            fontSize: '24px',
             fontStyle: '700',
-            color: '#f8fafc',
+            color: '#20150f',
             align: 'center',
-            wordWrap: { width: 500 }
+            wordWrap: { width: 400 }
         }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(43).setVisible(false)
 
-        this.modalBody = this.add.text(0, 0, '', {
-            fontFamily: '"Manrope", Arial, sans-serif',
-            fontSize: '14px',
-            color: '#dbeafe',
-            align: 'center',
-            lineSpacing: 7,
-            wordWrap: { width: 500 }
-        }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(43).setVisible(false)
-
-        this.modalFooter = this.add.text(0, 0, '', {
-            fontFamily: '"Manrope", Arial, sans-serif',
+        this.modalBody = this.add.text(240, 125, '', {
+            fontFamily: '"Libre Baskerville", Georgia, serif',
             fontSize: '13px',
+            color: '#35261c',
+            align: 'center',
+            lineSpacing: 6,
+            wordWrap: { width: 420 }
+        }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(43).setVisible(false)
+
+        this.modalFooter = this.add.text(240, 260, '', {
+            fontFamily: '"Manrope", Arial, sans-serif',
+            fontSize: '12px',
             fontStyle: '700',
-            color: '#94a3b8',
+            color: '#6d5235',
             align: 'center',
             wordWrap: { width: 500 }
         }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(43).setVisible(false)
+        
+        this.modalMurdererPhoto = this.add.image(240, 180, 'room-door').setVisible(false).setDepth(44).setScale(2)
 
         this.createNotesPanel()
     }
@@ -651,10 +534,10 @@ export default class RoomScene extends Scene {
             }
         }
 
-        this.handleChoice1 = () => this.chooseEnding(0)
-        this.handleChoice2 = () => this.chooseEnding(1)
-        this.handleChoice3 = () => this.chooseEnding(2)
-        this.handleChoice4 = () => this.chooseEnding(3)
+        this.handleChoice1 = () => this.handleModalChoice(1)
+        this.handleChoice2 = () => this.handleModalChoice(2)
+        this.handleChoice3 = () => this.handleModalChoice(3)
+        this.handleChoice4 = () => this.handleModalChoice(4)
         this.handleNote = () => this.appendPendingNote()
         this.handleKeydown = event => this.handleCodeInput(event)
 
@@ -766,42 +649,83 @@ export default class RoomScene extends Scene {
     showCodeModal(clue) {
         this.codeClue = clue
         this.codeInput = ''
-        this.updateCodeModal()
         this.modalMode = 'code'
+        this.updateCodeModal()
+    }
+
+    showDoorCodeModal(door) {
+        this.codeDoor = door
+        this.codeInput = ''
+        this.modalMode = 'door-code'
+        this.updateCodeModal()
+    }
+
+    showCodeModal(clue) {
+        this.codeClue = clue
+        this.codeInput = ''
+        this.modalMode = 'code'
+        this.updateCodeModal()
+    }
+
+    showDoorCodeModal(door) {
+        this.codeDoor = door
+        this.codeInput = ''
+        this.modalMode = 'door-code'
+        this.updateCodeModal()
     }
 
     updateCodeModal() {
         const codePreview = this.codeInput || '...'
+        const isDoor = this.modalMode === 'door-code'
+        const title = isDoor ? 'Access Code Required' : this.codeClue.title
+        const body = isDoor 
+            ? `Enter the 4-digit code to unlock this door.\n\nEntered code: ${codePreview}`
+            : [this.codeClue.lockedText ?? 'Locked with a code.', '', `Entered code: ${codePreview}`].join('\n')
 
         this.showModal(
-            this.codeClue.title,
-            [
-                this.codeClue.lockedText ?? 'Locked with a code.',
-                '',
-                `Entered code: ${codePreview}`
-            ].join('\n'),
-            'Type digits and dash. Enter checks, Backspace deletes, Esc closes.',
-            'code'
+            title,
+            body,
+            'Type digits and press Enter. Backspace deletes, Esc closes.',
+            this.modalMode
         )
     }
 
     handleCodeInput(event) {
-        if (this.modalMode !== 'code' || !this.codeClue) {
+        if (this.modalMode !== 'code' && this.modalMode !== 'door-code') {
             return
         }
 
         if (event.key === 'Enter') {
-            const target = normalizeCode(this.codeClue.code)
-            const input = normalizeCode(this.codeInput)
+            if (this.modalMode === 'code') {
+                const target = normalizeCode(this.codeClue.code)
+                const input = normalizeCode(this.codeInput)
 
-            if (input === target) {
-                const clue = this.codeClue
-                this.codeClue = null
-                this.codeInput = ''
-                this.collectClue(clue)
-                this.setNotice('Code accepted.', 1800)
-            } else {
-                this.setNotice('Code does not match.', 1600)
+                if (input === target) {
+                    const clue = this.codeClue
+                    this.codeClue = null
+                    this.codeInput = ''
+                    this.hideModal()
+                    this.collectClue(clue)
+                    this.setNotice('Code accepted.', 1800)
+                } else {
+                    this.setNotice('Code does not match.', 1600)
+                }
+            } else if (this.modalMode === 'door-code') {
+                const target = normalizeCode(this.codeDoor.code)
+                const input = normalizeCode(this.codeInput)
+
+                if (input === target) {
+                    if (!this.state.unlockedDoors) this.state.unlockedDoors = []
+                    this.state.unlockedDoors.push(this.codeDoor.targetScene)
+                    const targetDoor = this.codeDoor
+                    this.hideModal()
+                    this.enterDoor(targetDoor)
+                    this.setNotice('Access Granted.', 1800)
+                } else {
+                    this.setNotice('Invalid Code.', 1600)
+                    this.codeInput = ''
+                    this.updateCodeModal()
+                }
             }
             return
         }
@@ -818,15 +742,41 @@ export default class RoomScene extends Scene {
         }
     }
 
-    showFinalChoiceModal() {
-        const truthLine = canReachTruth()
-            ? 'You have enough clues to name the truth.'
-            : 'You can decide now, but the full truth is not proven yet.'
+    handleModalChoice(index) {
+        if (this.modalMode === 'final-choice') {
+            this.chooseEnding(index - 1)
+        } else if (this.modalMode === 'quiz') {
+            this.chooseQuizAnswer(index - 1)
+        }
+    }
 
+    showSettings() {
+        this.showModal(
+            'Settings & Controls',
+            [
+                'MUSIC VOLUME',
+                '[Slider Placeholder ----------------]',
+                '',
+                'CONTROLS:',
+                'WASD / Arrows: Move character',
+                'E / Enter: Interact / Next',
+                'F: Open Accusation Menu',
+                'N: Save interview to Notes',
+                'Esc: Close Modal / Notes'
+            ].join('\n'),
+            'Settings saved. Press E or Esc to close.',
+            'settings'
+        )
+    }
+
+    showFinalChoiceModal() {
+        this.quizAnswers = []
+        this.quizStep = 0
         this.showModal(
             'Detective final decision',
             [
-                truthLine,
+                'You are about to name the killer.',
+                'But first, you must prove your logic.',
                 '',
                 `1. ${ENDING_OPTIONS[0].label}`,
                 `2. ${ENDING_OPTIONS[1].label}`,
@@ -839,26 +789,68 @@ export default class RoomScene extends Scene {
     }
 
     chooseEnding(index) {
-        if (this.modalMode !== 'final-choice') {
-            return
-        }
+        if (this.modalMode !== 'final-choice') return
+        this.pendingEndingIndex = index
+        this.startAccusationQuiz()
+    }
 
-        const option = ENDING_OPTIONS[index]
-
-        if (!option) {
-            return
-        }
-
-        const result = resolveEnding(option.id)
-
+    startAccusationQuiz() {
+        const question = CASE_QUIZ[this.quizStep]
         this.showModal(
-            result.title,
-            result.body,
-            'Press E, F, or Esc to return to the manor.',
-            'ending'
+            `Question ${this.quizStep + 1} of 3`,
+            [
+                question.question,
+                '',
+                ...question.options.map((opt, i) => `${i + 1}. ${opt}`)
+            ].join('\n'),
+            'Press 1, 2, 3, or 4 to answer.',
+            'quiz'
         )
+    }
 
-        this.updateHeader()
+    chooseQuizAnswer(answerIndex) {
+        if (this.modalMode !== 'quiz') return
+        this.quizAnswers.push(answerIndex)
+        this.quizStep++
+
+        if (this.quizStep < CASE_QUIZ.length) {
+            this.startAccusationQuiz()
+        } else {
+            const option = ENDING_OPTIONS[this.pendingEndingIndex]
+            const result = resolveEnding(option.id, this.quizAnswers)
+            
+            if (result.id === 'arrest-walter' && canReachTruth()) {
+                this.showMurdererResult(result)
+            } else {
+                this.showModal(
+                    result.title,
+                    result.body,
+                    'Press E, F, or Esc to return.',
+                    'ending'
+                )
+            }
+            this.updateHeader()
+        }
+    }
+
+    showMurdererResult(result) {
+        this.showModal(
+            'CASE SOLVED',
+            '',
+            'Press E to close.',
+            'murder-reveal'
+        )
+        
+        this.modalTitle.setText('THE MURDERER IS')
+        this.modalTitle.setStyle({ color: '#ff0000', fontSize: '32px' })
+        
+        const suspect = SUSPECTS['walter']
+        this.modalBody.setText(`${suspect.name}\n\n${result.body}`)
+        this.modalBody.setY(220)
+        
+        this.modalMurdererPhoto.setTexture(assetKey(suspect.portrait))
+        this.modalMurdererPhoto.setVisible(true)
+        this.modalMurdererPhoto.setY(150)
     }
 
     showInventoryItem(item) {
@@ -878,12 +870,22 @@ export default class RoomScene extends Scene {
         this.modalFooter.setText(footer)
 
         const bodyLength = body.length
-        const fontSize = bodyLength > 980 ? 13 : bodyLength > 680 ? 14 : 16
-        const lineSpacing = bodyLength > 820 ? 5 : 7
+        const fontSize = bodyLength > 1200 ? 10 : bodyLength > 900 ? 11 : bodyLength > 600 ? 12 : 13
+        const lineSpacing = bodyLength > 900 ? 3 : 5
         this.modalBody.setStyle({
             fontSize: `${fontSize}px`,
             lineSpacing
         })
+        
+        this.modalMurdererPhoto.setVisible(false)
+        
+        if (mode === 'quiz') {
+            this.modalBody.setY(130)
+        } else if (mode === 'murder-reveal') {
+            this.modalBody.setY(210)
+        } else {
+            this.modalBody.setY(this.modalTitle.y + 40)
+        }
 
         this.modalBackdrop.setVisible(true)
         this.modalShadow.setVisible(true)
@@ -907,6 +909,7 @@ export default class RoomScene extends Scene {
         this.modalTitle.setVisible(false)
         this.modalBody.setVisible(false)
         this.modalFooter.setVisible(false)
+        this.modalMurdererPhoto.setVisible(false)
     }
 
     toggleNotes(force) {
@@ -930,9 +933,14 @@ export default class RoomScene extends Scene {
             return
         }
 
+        if (door.code && !this.state.unlockedDoors?.includes(door.targetScene)) {
+            this.showDoorCodeModal(door)
+            return
+        }
+
         if (door.requires && !hasAllItems(door.requires)) {
             const missing = door.requires.filter(id => !hasItem(id)).length
-            this.setNotice(`Locked. Missing ${missing} required items or clues.`, 2600)
+            this.setNotice(`Locked. Missing ${missing} required clues.`, 2600)
             return
         }
 
@@ -965,9 +973,8 @@ export default class RoomScene extends Scene {
 
     updateHeader() {
         const clueCount = this.clues.length
-        const solvedText = this.state.solved ? 'Solved' : 'Active'
-        this.roomTitle.setText(this.roomConfig.title)
-        this.clueCounterText.setText(`${solvedText} | ${clueCount}/${CASE_FILE.totalClues}`)
+        const solvedText = this.state.solved ? ' - SOLVED' : ''
+        this.headerTitle.setText(`${this.roomConfig.title.toUpperCase()}${solvedText} | EVIDENCE: ${clueCount}/${CASE_FILE.totalClues}`)
     }
 
     updateInteractionState() {
@@ -986,7 +993,6 @@ export default class RoomScene extends Scene {
             const strokeColor = locked ? 0xef4444 : 0x7dd3fc
 
             door.glow.setStrokeStyle(2, strokeColor, isNear ? 0.92 : 0)
-            door.sprite.setTint(isNear ? (locked ? 0xfca5a5 : 0xe0f2fe) : 0xffffff)
 
             if (!isNear) {
                 return
@@ -1010,12 +1016,8 @@ export default class RoomScene extends Scene {
             const isNear = now - clue.lastSeenAt <= INTERACTION_WINDOW
             const locked = clue.requires && !hasAllItems(clue.requires)
 
-            clue.visual.setScale(isNear && !collected ? 1.04 : 1)
-            clue.highlight.setStrokeStyle(
-                2,
-                collected ? 0x86efac : (locked ? 0xef4444 : 0xf8deb1),
-                isNear || collected ? 0.95 : 0
-            )
+            const scaleFactor = isNear && !collected ? 1.1 : 1
+            clue.visual.setScale(clue.baseScale * scaleFactor)
 
             if (!isNear) {
                 return
@@ -1036,8 +1038,8 @@ export default class RoomScene extends Scene {
 
         this.characterObjects.forEach(character => {
             const isNear = now - character.lastSeenAt <= INTERACTION_WINDOW
-            character.sprite.setScale(isNear ? 1.04 : 1)
-            character.highlight.setStrokeStyle(2, 0xf8deb1, isNear ? 0.92 : 0)
+            const scaleFactor = isNear ? 1.1 : 1
+            character.sprite.setScale(character.baseScale * scaleFactor)
 
             if (!isNear) {
                 return
@@ -1094,25 +1096,29 @@ export default class RoomScene extends Scene {
         this.inventoryElements = []
 
         const items = getInventoryItems()
+        const zoom = this.cameras.main.zoom
+        const invZoom = 1 / zoom
         const width = this.scale.width
-        const maxVisible = Math.max(6, Math.floor((width - 190) / (INVENTORY_SLOT_SIZE + 6)))
+        const maxVisible = Math.max(6, Math.floor((width - 190 * invZoom) / ((INVENTORY_SLOT_SIZE + 6) * invZoom)))
         const visibleItems = items.slice(Math.max(0, items.length - maxVisible))
-        const startX = 142
-        const y = this.scale.height - 28
+        const startX = 142 * invZoom
+        const y = this.scale.height - 21 * invZoom
 
         visibleItems.forEach((item, index) => {
-            const x = startX + index * (INVENTORY_SLOT_SIZE + 6)
+            const x = startX + index * (INVENTORY_SLOT_SIZE + 6) * invZoom
             const slot = this.add.rectangle(x, y, INVENTORY_SLOT_SIZE, INVENTORY_SLOT_SIZE, 0x241a13, 0.96)
                 .setStrokeStyle(1, 0x8d7350, 0.86)
                 .setScrollFactor(0)
                 .setDepth(26)
+                .setScale(invZoom)
                 .setInteractive({ useHandCursor: true })
 
             const iconKey = assetKey(item.icon)
             const icon = this.textures.exists(iconKey)
-                ? this.add.image(x, y, iconKey).setDisplaySize(26, 26)
-                : this.add.rectangle(x, y, 24, 24, 0xd8b56d, 0.9)
+                ? this.add.image(x, y, iconKey).setDisplaySize(26 * invZoom, 26 * invZoom)
+                : this.add.rectangle(x, y, 24 * invZoom, 24 * invZoom, 0xd8b56d, 0.9)
             icon.setScrollFactor(0).setDepth(27)
+            icon.setScale(invZoom)
 
             slot.on('pointerdown', () => this.showInventoryItem(item))
             icon.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.showInventoryItem(item))
@@ -1138,47 +1144,67 @@ export default class RoomScene extends Scene {
 
         this.configureCamera()
 
-        this.vignetteTop.setSize(width, 104)
-        this.vignetteBottom.setSize(width, 126)
-        this.vignetteBottom.setPosition(0, height)
-
-        this.headerPlate.setPosition(268, 50)
-        this.roomTitle.setPosition(44, 50)
-        this.cluePill.setPosition(426, 50)
-        this.clueCounterText.setPosition(426, 50)
-
-        this.notesButton.setPosition(width - 68, 50)
-        this.notesButtonText.setPosition(width - 68, 50)
-
-        this.noticeText.setPosition(width - 40, 86)
-        this.noticeText.setWordWrapWidth(Math.min(520, width * 0.36))
-
-        const promptWidth = Math.min(840, width - 100)
-        this.promptPlate.setSize(promptWidth, 46)
-        this.promptPlate.setPosition(width / 2, height - 88)
-        this.promptText.setPosition(width / 2, height - 88)
-
-        this.inventoryPlate.setSize(Math.min(980, width - 54), 54)
-        this.inventoryPlate.setPosition(width / 2, height - 28)
-        this.inventoryLabel.setPosition(50, height - 28)
+        this.header.setSize(width, 42)
+        this.inventoryBar.setSize(width, 42)
+        this.inventoryBar.setPosition(0, height)
+        
+        this.accusationButton.setPosition(width - 130, 21)
+        this.accusationText.setPosition(width - 130, 21)
+        this.settingsButton.setPosition(width - 40, 21)
+        this.settingsText.setPosition(width - 40, 21)
+        
+        this.noticeText.setPosition(width - 14, 54)
+        this.promptText.setPosition(14, height - 14)
 
         this.modalBackdrop.setSize(width, height)
-        this.modalShadow.setPosition(width / 2 + 10, height / 2 + 12)
-        this.modalPaperBack.setPosition(width / 2 + 4, height / 2 + 4)
-        this.modalFolder.setPosition(width / 2, height / 2)
-        this.modalStamp.setPosition(width / 2, height / 2 - 152)
-        this.modalTitle.setPosition(width / 2, height / 2 - 124)
-        this.modalBody.setPosition(width / 2, height / 2 - 54)
-        this.modalBody.setWordWrapWidth(Math.min(600, width - 180))
-        this.modalFooter.setPosition(width / 2, height / 2 + 168)
+        this.modalBackdrop.setPosition(width / 2, height / 2)
+        
+        const zoom = this.cameras.main.zoom
+        const invZoom = 1 / zoom
+        
+        const uiElements = [
+            this.header, this.headerTitle, this.accusationButton, this.accusationText,
+            this.settingsButton, this.settingsText, this.noticeText, this.promptText,
+            this.inventoryBar,
+            this.modalShadow, this.modalPaperBack, this.modalFolder,
+            this.modalStamp, this.modalTitle, this.modalBody, this.modalFooter,
+            this.modalMurdererPhoto
+        ]
+        uiElements.forEach(el => el.setScale(invZoom))
+
+        const modalX = width / 2
+        const modalY = height / 2
+
+        this.modalShadow.setPosition(modalX + 4 * invZoom, modalY + 4 * invZoom)
+        this.modalShadow.setSize(340, 220)
+        this.modalPaperBack.setPosition(modalX, modalY)
+        this.modalPaperBack.setSize(320, 200)
+        this.modalFolder.setPosition(modalX, modalY)
+        this.modalFolder.setSize(310, 190)
+        
+        this.modalStamp.setPosition(modalX, modalY - 70 * invZoom)
+        this.modalTitle.setPosition(modalX, modalY - 50 * invZoom)
+        this.modalBody.setPosition(modalX, modalY - 10 * invZoom)
+        this.modalFooter.setPosition(modalX, modalY + 80 * invZoom)
+        this.modalMurdererPhoto.setPosition(modalX, modalY + 20 * invZoom)
+        
+        this.header.setSize(width * zoom, 42)
+        this.header.setPosition(0, 0)
+        this.inventoryBar.setSize(width * zoom, 42)
+        this.inventoryBar.setPosition(0, height)
+
+        this.accusationButton.setPosition(width - 130 * invZoom, 21 * invZoom)
+        this.accusationText.setPosition(width - 130 * invZoom, 21 * invZoom)
+        this.settingsButton.setPosition(width - 40 * invZoom, 21 * invZoom)
+        this.settingsText.setPosition(width - 40 * invZoom, 21 * invZoom)
+        
+        this.noticeText.setPosition(width - 14 * invZoom, 54 * invZoom)
+        this.promptText.setPosition(14 * invZoom, height - 14 * invZoom)
 
         if (this.notesDom) {
-            const panelWidth = Math.min(330, Math.max(260, width * 0.28))
-            const panelHeight = Math.min(430, Math.max(250, height - 160))
-            const panel = this.notesDom.node.querySelector('.blackwood-notes')
-            panel.style.width = `${panelWidth}px`
-            panel.style.height = `${panelHeight}px`
-            this.notesDom.setPosition(width - panelWidth / 2 - 24, height / 2 + 10)
+            const panelWidth = 300
+            const panelHeight = 400
+            this.notesDom.setPosition(width - panelWidth / 2 - 20, height / 2)
         }
 
         this.rebuildInventoryBar()

@@ -1,700 +1,524 @@
 export const roomConfigs = {
     livingRoom: {
         key: 'LivingRoomScene',
-        title: 'Главен хол',
+        title: 'Main Hall',
         mapName: 'living-room',
         accentColor: 0xd8b56d,
-        intro: 'Холът е центърът на имението, но заподозрените вече са се пръснали по стаите си. Отгоре кабинетът още мирише на кръв и уиски.',
+        intro: 'The heart of the manor. Rain taps against the high windows. The air is thick with history and unspoken secrets.',
         spawnPoint: { x: 240, y: 176 },
         doors: [
-            { label: 'Кухня', targetScene: 'KitchenScene', spawnPoint: { x: 88, y: 104 }, x: 444, y: 96, width: 32, height: 96 },
-            { label: 'Кабинетът на Arthur', targetScene: 'OfficeScene', spawnPoint: { x: 392, y: 112 }, x: 36, y: 96, width: 32, height: 96 },
-            { label: 'Спалнята на Arthur', targetScene: 'BedroomScene', spawnPoint: { x: 240, y: 72 }, x: 240, y: 252, width: 112, height: 28 },
-            { label: 'Трапезария', targetScene: 'DiningRoomScene', spawnPoint: { x: 240, y: 212 }, x: 132, y: 252, width: 72, height: 28 },
-            { label: 'Стаята на Walter', targetScene: 'WalterRoomScene', spawnPoint: { x: 88, y: 112 }, x: 348, y: 252, width: 72, height: 28 }
+            { label: 'Kitchen', targetScene: 'KitchenScene', spawnPoint: { x: 88, y: 104 }, x: 444, y: 112, width: 42, height: 120 },
+            { label: 'Dining Room', targetScene: 'DiningRoomScene', spawnPoint: { x: 240, y: 88 }, x: 240, y: 252, width: 140, height: 32, isElevator: true }
         ],
         characters: [
-            { id: 'martha', x: 122, y: 176 }
+            { id: 'martha', x: 122, y: 186 }
         ],
         clues: [
             {
                 id: 'letter-ruth',
                 type: 'letter',
-                title: 'Писмо 1 - Ruth Hayes',
-                description: 'Зад портрет на младия Walter е скрито писмо от Ruth Hayes, биологичната майка на Arthur.',
-                details: '"Взимам парите и заминавам. Детето е ваше. Никой няма да разбере. Но ако някой ден разбере, че не го обичате, ще се върна и ще ви унищожа."',
+                title: 'Letter from Ruth Hayes',
+                description: 'A letter hidden behind a portrait of young Walter.',
+                details: '"I am taking the money and leaving. The child is yours. No one will ever know. But if one day he finds out you do not love him, I will return and destroy you."',
                 icon: 'random/note.png',
                 x: 72,
                 y: 64,
-                width: 36,
-                height: 44,
+                width: 50,
+                height: 40,
                 visual: { type: 'image', image: 'decor/picture1.png' }
             },
             {
-                id: 'tunnel-map',
-                type: 'map',
-                title: 'Карта на тайните тунели',
-                description: 'На гърба на картина на имението има ръкописна карта. Подписът е на Eddie.',
-                details: 'Картата показва проход зад камината в кабинета, релси в стената и врата в сутерена зад бойлера.',
-                icon: 'random/picture.png',
-                x: 408,
-                y: 66,
-                width: 42,
-                height: 36,
-                visual: { type: 'image', image: 'random/picture.png' }
-            },
-            {
-                id: 'silver-key',
-                type: 'key',
-                title: 'Малък сребърен ключ',
-                description: 'В джоба на Winston има малък сребърен ключ. Той отключва старото бюро на Arthur.',
-                details: 'Winston твърди, че Arthur му го е дал "за подреждане". Ключът е чист, но носи прах от спалнята на Arthur.',
-                icon: 'office/chest.png',
-                x: 156,
-                y: 188,
-                width: 26,
-                height: 26,
-                visual: { type: 'image', image: 'office/chest.png' }
-            },
-            {
-                id: 'magnifier',
-                type: 'tool',
-                title: 'Лупа',
-                description: 'Малка лупа в полицейската чанта до входа. Полезна за миниатюрни следи.',
-                details: 'С нея можете да прочетете микрофилма, скрит в картината "Елен в гората".',
-                icon: 'bathroom/mirror.png',
+                id: 'wedding-photo-code',
+                type: 'code',
+                title: 'Wedding Photo',
+                description: 'On the back of Eleanor and Walter\'s wedding photo, a date is handwritten: 1947-10-12.',
+                details: 'This looks like a combination for a safe.',
+                icon: 'random/photo.png',
                 x: 386,
-                y: 208,
-                width: 28,
-                height: 34,
-                visual: { type: 'image', image: 'bathroom/mirror.png' }
-            },
-            {
-                id: 'officer-briefing',
-                type: 'note',
-                title: 'Доклад на полицай Malone',
-                description: 'Кратък доклад от входа: вратата на кабинета е била заключена отвътре, а всички девет души са били в имението.',
-                details: 'Malone отбелязва: Gordy и Martha са с кръв, но никой не е напускал къщата. Тялото е открито сутринта. Първата реакция на Walter е била мълчание.',
-                icon: 'random/notebook.png',
-                x: 330,
-                y: 212,
-                width: 34,
-                height: 34,
-                visual: { type: 'image', image: 'random/notebook.png' }
+                y: 72,
+                width: 50,
+                height: 40,
+                visual: { type: 'image', image: 'random/photo.png' }
             }
         ]
     },
     kitchen: {
         key: 'KitchenScene',
-        title: 'Кухня',
+        title: 'Kitchen',
         mapName: 'kitchen',
         accentColor: 0xe6c15a,
-        intro: 'Кухнята е пълна с метален шум, студено месо и страх. Ножовете са подредени твърде внимателно, освен един.',
-        spawnPoint: { x: 88, y: 104 },
+        intro: 'Cold meat and sharp steel. The cook stands here, his hands still trembling.',
+        spawnPoint: { x: 88, y: 112 },
         doors: [
-            { label: 'Главен хол', targetScene: 'LivingRoomScene', spawnPoint: { x: 392, y: 96 }, x: 36, y: 96, width: 32, height: 96 },
-            { label: 'Трапезария', targetScene: 'DiningRoomScene', spawnPoint: { x: 240, y: 72 }, x: 240, y: 36, width: 112, height: 28 },
-            { label: 'Работилница', targetScene: 'WorkshopScene', spawnPoint: { x: 88, y: 112 }, x: 444, y: 96, width: 32, height: 96 }
+            { label: 'Main Hall', targetScene: 'LivingRoomScene', spawnPoint: { x: 392, y: 112 }, x: 36, y: 112, width: 42, height: 120 },
+            { label: 'Workshop', targetScene: 'WorkshopScene', spawnPoint: { x: 88, y: 112 }, x: 444, y: 112, width: 42, height: 120 }
         ],
         characters: [
-            { id: 'gordy', x: 348, y: 156 }
+            { id: 'gordy', x: 348, y: 166 }
         ],
         clues: [
             {
-                id: 'gordy-letter',
+                id: 'gordy-confession',
                 type: 'letter',
-                title: 'Писмо 3 - Gordy до брат си',
-                description: 'Под чувал с брашно има писмо, което Gordy не е успял да изпрати.',
-                details: '"Старият Walter ме помоли да му оставя нож в стаята. Каза, че иска да реже ябълки. Дадох му го. Сега ножът е в гърдите на Arthur. Walter ме заплаши, че ако кажа нещо, ще каже, че аз съм го направил. Какво да правя?"',
+                title: 'Gordy\'s Unsent Letter',
+                description: 'A letter found under a sack of flour.',
+                details: '"Old Walter asked me for a knife. Said he wanted to cut apples. I gave it to him. Now that knife is in Arthur\'s chest. Walter threatened me... what should I do?"',
                 icon: 'random/note.png',
                 x: 116,
-                y: 188,
-                width: 34,
-                height: 38,
+                y: 198,
+                width: 50,
+                height: 40,
                 visual: { type: 'image', image: 'random/note.png' }
             },
             {
-                id: 'blood-analysis',
+                id: 'fingerprints-knife',
                 type: 'evidence',
-                title: 'Анализ на кръвта по дрехите',
-                description: 'Кръвта по престилката на Gordy е от телешко и от трупа, не от активен удар. Ръкавът на Martha е намокрен от локвата.',
-                details: 'Gordy е опитал да извади ножа след откриването на тялото. Martha е паднала до трупа. Нито една следа не доказва, че някой от двамата е нанесъл удара.',
-                icon: 'random/bloodspot2.png',
-                x: 306,
-                y: 206,
-                width: 36,
-                height: 30,
-                visual: { type: 'image', image: 'random/bloodspot2.png' }
-            },
-            {
-                id: 'fingerprints-report',
-                type: 'evidence',
-                title: 'Отпечатъци по ножа',
-                description: 'Отпечатъците на Gordy са стари кухненски следи. Върху дръжката има размазване от ръкавица.',
-                details: 'Докладът премахва Gordy като човек, който е държал ножа в момента на убийството. Някой е използвал кухненския му нож като чужда следа.',
+                title: 'Fingerprints Report',
+                description: 'A police report on the knife.',
+                details: 'Only Gordy\'s fingerprints are on the handle. However, they are old and greasy, not fresh.',
                 icon: 'random/knivewithblood.png',
                 x: 302,
                 y: 96,
-                width: 34,
-                height: 34,
-                visual: { type: 'image', image: 'random/knivewithblood.png' }
-            },
-            {
-                id: 'meat-alibi',
-                type: 'alibi',
-                title: 'Кухненско алиби',
-                description: 'Остатъците от телешко и часовникът на фурната подкрепят твърдението на Gordy, че е готвил между 19:00 и 20:45.',
-                details: 'Martha го е видяла до 20:00. Това не е перфектно алиби, но кръвта по престилката вече не е достатъчна за обвинение.',
-                icon: 'kitchen/food.png',
-                x: 82,
-                y: 76,
-                width: 30,
-                height: 30,
-                visual: { type: 'image', image: 'kitchen/food.png' }
-            }
-        ]
-    },
-    bedroom: {
-        key: 'BedroomScene',
-        title: 'Спалнята на Arthur',
-        mapName: 'bedroom',
-        accentColor: 0xaec6cf,
-        intro: 'Стаята на Arthur е подредена като витрина. Истинските документи са там, където никой гост не би пипнал.',
-        spawnPoint: { x: 240, y: 72 },
-        doors: [
-            { label: 'Главен хол', targetScene: 'LivingRoomScene', spawnPoint: { x: 240, y: 212 }, x: 240, y: 36, width: 112, height: 28 },
-            { label: 'Кабинетът на Arthur', targetScene: 'OfficeScene', spawnPoint: { x: 88, y: 112 }, x: 444, y: 112, width: 32, height: 96 },
-            { label: 'Стаята на Eleanor', targetScene: 'EleanorRoomScene', spawnPoint: { x: 392, y: 112 }, x: 36, y: 112, width: 32, height: 96 }
-        ],
-        clues: [
-            {
-                id: 'letter-eleanor-walter',
-                type: 'letter',
-                title: 'Писмо 2 - Eleanor до Walter',
-                description: 'Старото бюро на Arthur е заключено. Вътре има писмо от Eleanor до Walter.',
-                details: '"Arthur уби нашето дете. Не това, което дадохме за осиновяване. Истинският ни син - от кръвта ни. Arthur разбра кой е и го прегази с колата си. Получих доклад от частния детектив. Съжалявам, че ти казвам това, но повече не мога да мълча."',
-                lockedText: 'Бюрото не помръдва. Малък сребърен ключ би паснал на ключалката.',
-                requires: ['silver-key'],
-                icon: 'random/note.png',
-                x: 164,
-                y: 184,
-                width: 38,
-                height: 34,
-                visual: { type: 'image', image: 'bedroom/desk.png' }
-            },
-            {
-                id: 'daniel-photo',
-                type: 'photo',
-                title: 'Снимка на Daniel Gray',
-                description: 'Снимка на млад мъж с надпис: "Моят син, 1983". Лицето не прилича на Arthur.',
-                details: 'Daniel Gray е бил истинският син на Walter и Eleanor. Някой е пазил снимката в стаята на Arthur като трофей или като вина.',
-                icon: 'random/photo2.png',
-                x: 214,
-                y: 128,
-                width: 36,
-                height: 34,
-                visual: { type: 'image', image: 'random/photo2.png' }
-            },
-            {
-                id: 'forged-will',
-                type: 'document',
-                title: 'Фалшиво завещание',
-                description: 'Проект от 1985 г. прави Arthur единствен наследник и изтрива Clara и Ben.',
-                details: 'Clara е имала мотив да съди Arthur, но не да го убие преди делото. Завещанието обяснява гнева, не убийството.',
-                icon: 'random/notebook.png',
-                x: 330,
-                y: 92,
-                width: 34,
-                height: 34,
-                visual: { type: 'image', image: 'random/notebook.png' }
-            },
-            {
-                id: 'ben-threat',
-                type: 'document',
-                title: 'Заплаха към Ben',
-                description: 'Писмо от Arthur до Ben: ако се върне в основното крило, ще бъде обвинен в престъпление, което не е извършил.',
-                details: 'Ben е удобен заподозрян за прибързан детектив, но документът показва по-скоро страх, отколкото мотив.',
-                icon: 'random/photo1.png',
-                x: 112,
-                y: 92,
-                width: 34,
-                height: 26,
-                visual: { type: 'image', image: 'random/photo1.png' }
-            }
-        ]
-    },
-    office: {
-        key: 'OfficeScene',
-        title: 'Кабинетът на Arthur',
-        mapName: 'office',
-        accentColor: 0xb84a4a,
-        intro: 'Тялото е в кабинета. Заключена врата, нож в гърдите, документи за Daniel по бюрото и камина, която не стои съвсем правилно.',
-        spawnPoint: { x: 392, y: 112 },
-        doors: [
-            { label: 'Главен хол', targetScene: 'LivingRoomScene', spawnPoint: { x: 88, y: 96 }, x: 444, y: 96, width: 32, height: 96 },
-            { label: 'Кухня', targetScene: 'KitchenScene', spawnPoint: { x: 240, y: 212 }, x: 240, y: 36, width: 112, height: 28 },
-            { label: 'Спалнята на Arthur', targetScene: 'BedroomScene', spawnPoint: { x: 392, y: 112 }, x: 36, y: 112, width: 32, height: 96 },
-            { label: 'Сутерен зад камината', targetScene: 'CellarScene', spawnPoint: { x: 392, y: 112 }, x: 240, y: 252, width: 112, height: 28, requires: ['rusty-key', 'floor-panel'] }
-        ],
-        clues: [
-            {
-                id: 'body-report',
-                type: 'evidence',
-                title: 'Трупът на Arthur',
-                description: 'Arthur е намушкан отзад, после е паднал напред. Часът на смъртта е между 20:15 и 20:55; най-силната следа сочи 20:41.',
-                details: '20:41 плюс датата на Arthur дава кода 8241 за подовия панел. Ударът е тих, точен и идва от човек, който е влязъл зад него.',
-                icon: 'characters/deadbody.png',
-                x: 244,
-                y: 132,
-                width: 48,
-                height: 30,
-                visual: { type: 'image', image: 'characters/deadbody.png' }
-            },
-            {
-                id: 'knife-evidence',
-                type: 'weapon',
-                title: 'Нож за филе',
-                description: 'Ножът е кухненски, но е донесен тук предварително. Дръжката е бърсана.',
-                details: 'Gordy е дал ножа на Walter, мислейки, че старецът ще реже ябълки. Самото оръжие е капан за готвача.',
-                icon: 'random/knivewithblood.png',
-                x: 292,
-                y: 126,
-                width: 34,
-                height: 34,
-                visual: { type: 'image', image: 'random/knivewithblood.png' }
-            },
-            {
-                id: 'gold-key',
-                type: 'key',
-                title: 'Миниатюрен златен ключ',
-                description: 'В джобния часовник на Arthur има тайно отделение с миниатюрен златен ключ.',
-                details: 'Ключът отключва малко чекмедже под картината в кабинета.',
-                icon: 'decor/clock.png',
-                x: 210,
-                y: 128,
-                width: 28,
-                height: 34,
-                visual: { type: 'image', image: 'decor/clock.png' }
-            },
-            {
-                id: 'arthur-confession',
-                type: 'letter',
-                title: 'Писмо 5 - признание на Arthur',
-                description: 'Малко чекмедже под картината се отключва със златния ключ. Вътре е скрито писмо.',
-                details: '"Аз убих човека, който твърдеше, че е истинският наследник. Беше грешка. Той ме изнудваше. Сега го няма. Ако някой прочете това - не търсете истината. Тя ще ви унищожи."',
-                lockedText: 'Чекмеджето е миниатюрно и заключено. Нужно е нещо по-малко от обикновен ключ.',
-                requires: ['gold-key'],
-                icon: 'random/note.png',
-                x: 86,
-                y: 68,
-                width: 38,
-                height: 34,
-                visual: { type: 'image', image: 'random/photo.png' }
-            },
-            {
-                id: 'floor-panel',
-                type: 'lock',
-                title: 'Подов панел - код 8241',
-                description: 'Панелът щраква. Под него има механична връзка към камината.',
-                details: 'Кодът е изведен от час 20:41. Панелът отключва достъп до скрития проход, но вратата в сутерена все още иска ръждясалия механичен ключ.',
-                code: '8241',
-                icon: 'random/door2open.png',
-                x: 238,
-                y: 208,
-                width: 38,
-                height: 34,
-                visual: { type: 'image', image: 'random/door2.png' }
-            },
-            {
-                id: 'fireplace-trace',
-                type: 'evidence',
-                title: 'Следи зад камината',
-                description: 'Саждите са изтрити по права линия. Някой е отварял камината като врата.',
-                details: 'В заключената стая не е било нужно да се влиза през вратата. Това разбива привидно невъзможния locked-room трик.',
-                icon: 'random/bloodfoodsteps.png',
-                x: 374,
-                y: 66,
-                width: 34,
-                height: 34,
-                visual: { type: 'image', image: 'random/bloodfoodsteps.png' }
-            }
-        ]
-    },
-    diningRoom: {
-        key: 'DiningRoomScene',
-        title: 'Трапезария',
-        mapName: 'dining-room',
-        accentColor: 0xc9a05a,
-        intro: 'Среброто е подредено с прекалена грижа. Картините гледат масата като свидетели, които са се научили да мълчат.',
-        spawnPoint: { x: 240, y: 212 },
-        doors: [
-            { label: 'Главен хол', targetScene: 'LivingRoomScene', spawnPoint: { x: 132, y: 212 }, x: 132, y: 252, width: 72, height: 28 },
-            { label: 'Кухня', targetScene: 'KitchenScene', spawnPoint: { x: 240, y: 72 }, x: 240, y: 36, width: 112, height: 28 },
-            { label: 'Стаята на Eleanor', targetScene: 'EleanorRoomScene', spawnPoint: { x: 88, y: 112 }, x: 444, y: 112, width: 32, height: 96 }
-        ],
-        characters: [
-            { id: 'winston', x: 146, y: 168 },
-            { id: 'clara', x: 338, y: 168 }
-        ],
-        clues: [
-            {
-                id: 'wedding-photo-code',
-                type: 'code',
-                title: 'Сватбена снимка',
-                description: 'На гърба на снимка на Eleanor и Walter пише: 1947-10-12.',
-                details: 'Това е кодът за сейфа в стаята на Walter.',
-                icon: 'random/photo.png',
-                x: 86,
-                y: 76,
-                width: 36,
-                height: 30,
-                visual: { type: 'image', image: 'random/photo.png' }
-            },
-            {
-                id: 'daniel-microfilm',
-                type: 'film',
-                title: 'Микрофилм от картината "Елен в гората"',
-                description: 'В окото на елена има микрофилм. С лупата се вижда протокол от катастрофата с Daniel Gray.',
-                details: 'Протоколът доказва, че Daniel Gray не е загинал случайно. Колата е била на Arthur, а спирачният път е прекалено къс за инцидент.',
-                lockedText: 'В окото на картината има нещо тъмно, но е твърде дребно за невъоръжено око.',
-                requires: ['magnifier'],
-                icon: 'decor/picture3.png',
-                x: 394,
-                y: 74,
-                width: 38,
+                width: 50,
                 height: 40,
-                visual: { type: 'image', image: 'decor/picture3.png' }
-            },
-            {
-                id: 'silverware-alibi',
-                type: 'alibi',
-                title: 'Разбъркано сребро',
-                description: 'Сребърните прибори подкрепят алибито на Winston само частично. Има работа, но няма свидетел.',
-                details: 'Winston е можел да бъде в трапезарията, но това не доказва, че е бил там през цялото време.',
-                icon: 'kitchen/bigtable.png',
-                x: 240,
-                y: 148,
-                width: 48,
-                height: 34,
-                visual: { type: 'image', image: 'kitchen/bigtable.png' }
-            },
-            {
-                id: 'library-alibi',
-                type: 'alibi',
-                title: 'Алиби на Clara',
-                description: 'Бележка от библиотеката показва час 21:00 и подпис на Winston. Clara е била видяна да излиза.',
-                details: 'Тя има мотив за съдебна битка, но не и чист прозорец за убийството.',
-                icon: 'office/bookshelf.png',
-                x: 146,
-                y: 206,
-                width: 34,
-                height: 40,
-                visual: { type: 'image', image: 'office/bookshelf.png' }
-            }
-        ]
-    },
-    walterRoom: {
-        key: 'WalterRoomScene',
-        title: 'Стаята на Walter',
-        mapName: 'walter-room',
-        accentColor: 0x9aa3a8,
-        intro: 'Стаята на Walter е подредена около инвалидния стол. Точно затова всичко, което не пасва на стола, крещи.',
-        spawnPoint: { x: 88, y: 112 },
-        doors: [
-            { label: 'Главен хол', targetScene: 'LivingRoomScene', spawnPoint: { x: 348, y: 212 }, x: 348, y: 252, width: 72, height: 28 },
-            { label: 'Сутерен', targetScene: 'CellarScene', spawnPoint: { x: 88, y: 112 }, x: 36, y: 112, width: 32, height: 96, requires: ['rusty-key'] }
-        ],
-        characters: [
-            { id: 'walter', x: 246, y: 148 }
-        ],
-        clues: [
-            {
-                id: 'rusty-key',
-                type: 'key',
-                title: 'Ръждясал механичен ключ',
-                description: 'Под възглавницата на Walter има ръждясал ключ. На гърба е гравирано 3357.',
-                details: 'Ключът отключва врата в сутерена зад бойлера. Кодът 3357 пасва на цифровата врата в работилницата на Eddie.',
-                icon: 'office/chest.png',
-                x: 232,
-                y: 108,
-                width: 30,
-                height: 28,
-                visual: { type: 'image', image: 'office/chest.png' }
-            },
-            {
-                id: 'birth-certificate',
-                type: 'document',
-                title: 'Свидетелство за раждане на Daniel Gray',
-                description: 'Сейфът на Walter се отваря. Вътре има свидетелство за раждане на Daniel Gray.',
-                details: 'Daniel е истинският син на Walter и Eleanor. Даден е за осиновяване, а после е убит от Arthur, когато е потърсил наследството си.',
-                code: '1947-10-12',
-                icon: 'random/notebook.png',
-                x: 374,
-                y: 88,
-                width: 36,
-                height: 34,
-                visual: { type: 'image', image: 'office/chest.png' }
-            },
-            {
-                id: 'walter-shoes',
-                type: 'evidence',
-                title: 'Кал по обувките',
-                description: 'Под леглото на Walter има обувки с прах от сутерена и тънка червеникава следа.',
-                details: 'Инвалидният стол няма такъв прах. Някой е ходил пеша през долния проход.',
-                icon: 'random/bloodfoodsteps.png',
-                x: 140,
-                y: 190,
-                width: 34,
-                height: 34,
-                visual: { type: 'image', image: 'random/foodsteps.png' }
-            },
-            {
-                id: 'hidden-walking-cane',
-                type: 'evidence',
-                title: 'Сгъваем бастун',
-                description: 'Зад гардероба има сгъваем бастун, изтъркан от употреба.',
-                details: 'Walter не е бил напълно прикован към стола. Той е репетирал ролята си шест години.',
-                icon: 'bedroom/clock.png',
-                x: 82,
-                y: 76,
-                width: 30,
-                height: 42,
-                visual: { type: 'image', image: 'bedroom/clock.png' }
-            }
-        ]
-    },
-    eleanorRoom: {
-        key: 'EleanorRoomScene',
-        title: 'Стаята на Eleanor',
-        mapName: 'eleanor-room',
-        accentColor: 0xcd9f92,
-        intro: 'Тук старостта е декор, а паметта е оръжие. Eleanor забравя само това, което избира.',
-        spawnPoint: { x: 392, y: 112 },
-        doors: [
-            { label: 'Спалнята на Arthur', targetScene: 'BedroomScene', spawnPoint: { x: 88, y: 112 }, x: 36, y: 112, width: 32, height: 96 },
-            { label: 'Трапезария', targetScene: 'DiningRoomScene', spawnPoint: { x: 392, y: 112 }, x: 444, y: 112, width: 32, height: 96 }
-        ],
-        characters: [
-            { id: 'eleanor', x: 238, y: 152 }
-        ],
-        clues: [
-            {
-                id: 'martha-letter',
-                type: 'letter',
-                title: 'Писмо 6 - Martha до дъщеря си',
-                description: 'В кутията на Eleanor е прибрано писмо на Martha. В него има код 1123.',
-                details: '"Снощи чистих кабинета, когато господин Arthur ме извика. Беше пиян. Каза: "Икономът ще умре тази нощ, но аз ще свърша работата с нож." Треперех. Той ме хвана за ръкава - затова има кръв по него. Не моята. Неговата? Не знам. Страх ме е."',
-                icon: 'random/note.png',
-                x: 126,
-                y: 102,
-                width: 34,
-                height: 38,
-                visual: { type: 'image', image: 'random/note.png' }
-            },
-            {
-                id: 'luminol',
-                type: 'tool',
-                title: 'Луминал',
-                description: 'Кутията на бабата се отваря с код 1123. Вътре има малък флакон луминал.',
-                details: 'Кодът е в писмото на Martha. Луминалът може да провери старо петно зад портрета на Eleanor.',
-                code: '1123',
-                icon: 'random/bloodspot3.png',
-                x: 332,
-                y: 108,
-                width: 34,
-                height: 34,
-                visual: { type: 'image', image: 'office/box.png' }
-            },
-            {
-                id: 'grandmother-blood',
-                type: 'evidence',
-                title: 'Старо петно зад портрета',
-                description: 'Луминалът разкрива изсъхнало петно от кръв на Arthur от детството му.',
-                details: 'Петното не е за убийството, но показва, че Eleanor е пазила семейни тайни зад картини много преди тази нощ.',
-                lockedText: 'Платното има петно, но без реагент не може да се докаже какво е.',
-                requires: ['luminol'],
-                icon: 'decor/picture6.png',
-                x: 388,
-                y: 74,
-                width: 34,
-                height: 42,
-                visual: { type: 'image', image: 'decor/picture6.png' }
+                visual: { type: 'image', image: 'random/knivewithblood.png' }
             }
         ]
     },
     workshop: {
         key: 'WorkshopScene',
-        title: 'Работилница',
+        title: 'Workshop',
         mapName: 'workshop',
         accentColor: 0x7bc2b2,
-        intro: 'Работилницата е пълна с части за врати, релси и тайни, които Eddie е мислел за чиста механика.',
+        intro: 'Oil, grease, and mechanical wonders. This is where the manor\'s secrets are built.',
         spawnPoint: { x: 88, y: 112 },
         doors: [
-            { label: 'Кухня', targetScene: 'KitchenScene', spawnPoint: { x: 392, y: 96 }, x: 36, y: 96, width: 32, height: 96 },
-            { label: 'Сутерен', targetScene: 'CellarScene', spawnPoint: { x: 240, y: 72 }, x: 240, y: 36, width: 112, height: 28, requires: ['rusty-key'] }
+            { label: 'Kitchen', targetScene: 'KitchenScene', spawnPoint: { x: 392, y: 112 }, x: 36, y: 112, width: 42, height: 120 },
+            { label: 'Cellar', targetScene: 'CellarScene', spawnPoint: { x: 88, y: 112 }, x: 444, y: 112, width: 42, height: 120, code: '3357' }
         ],
         characters: [
-            { id: 'eddie', x: 164, y: 152 },
-            { id: 'ben', x: 334, y: 154 }
+            { id: 'eddie', x: 164, y: 162 },
+            { id: 'ben', x: 334, y: 164 }
         ],
         clues: [
             {
                 id: 'key-fragment',
                 type: 'key',
-                title: 'Фрагмент от ключ',
-                description: 'В кутията с инструменти на Eddie има фрагмент от ключ.',
-                details: 'Фрагментът отключва тайното чекмедже в ателието на Eddie, ако знаете и кода 3357.',
+                title: 'Key Fragment',
+                description: 'A piece of a key found in Eddie\'s toolbox.',
+                details: 'It opens the hidden drawer in his workshop.',
                 icon: 'office/box.png',
                 x: 94,
-                y: 188,
-                width: 34,
-                height: 34,
+                y: 198,
+                width: 40,
+                height: 30,
                 visual: { type: 'image', image: 'office/box.png' }
-            },
-            {
-                id: 'tunnel-sketches',
-                type: 'map',
-                title: 'Скици на релсова система',
-                description: 'Скиците описват движещ се стол в стените и механизъм за заключване на резета отвътре.',
-                details: 'Eddie е строил нещо, което може да превърне заключена стая в сцена. Той твърди, че не е знаел за убийство.',
-                icon: 'random/notebook.png',
-                x: 236,
-                y: 104,
-                width: 36,
-                height: 34,
-                visual: { type: 'image', image: 'random/notebook.png' }
             },
             {
                 id: 'eddie-diary',
                 type: 'letter',
-                title: 'Писмо 4 - дневникът на Eddie',
-                description: 'Тайното чекмедже се отваря с фрагмента и код 3357. Вътре е дневникът на Eddie.',
-                details: '"Дядо Walter ми плати 10 хиляди долара за ремонт на стените. Направих ему релси и дистанционно. Не знаех за какво са. Снощи видях кръв по краката му. Той не беше в инвалидния стол. Той вървеше."',
-                lockedText: 'Чекмеджето има цифрова брава и счупена ключалка. Трябват кодът 3357 и фрагментът от ключ.',
-                code: '3357',
+                title: 'Eddie\'s Diary',
+                description: 'A hidden drawer that requires a code and a key fragment.',
+                details: '"Walter paid me 10k for \'wall repairs\'. I built rails and a remote. Last night I saw him walking. He wasn\'t in the chair."',
                 requires: ['key-fragment'],
                 icon: 'random/note.png',
                 x: 308,
                 y: 100,
-                width: 36,
-                height: 34,
-                visual: { type: 'image', image: 'office/chest.png' }
-            },
-            {
-                id: 'remote-components',
-                type: 'device',
-                title: 'Части за дистанционно',
-                description: 'На масата има корпус, жици и механична схема за заключване на резета.',
-                details: 'Системата е направена така, че вратата да изглежда заключена отвътре, дори когато убиецът вече е излязъл през стената.',
-                icon: 'random/elevator.png',
-                x: 382,
-                y: 190,
-                width: 34,
-                height: 34,
-                visual: { type: 'image', image: 'random/elevator.png' }
+                width: 60,
+                height: 40,
+                visual: { type: 'image', image: 'random/note.png' }
             }
         ]
     },
     cellar: {
         key: 'CellarScene',
-        title: 'Сутерен и тунели',
+        title: 'Cellar',
         mapName: 'cellar',
         accentColor: 0x80a0a7,
-        intro: 'Зад бойлера въздухът е студен. Релсите изчезват в стените, а колелата им са по-чисти от пода.',
-        spawnPoint: { x: 240, y: 72 },
+        intro: 'The hidden veins of the manor. The cold truth lies behind these walls.',
+        spawnPoint: { x: 88, y: 112 },
         doors: [
-            { label: 'Кабинетът на Arthur', targetScene: 'OfficeScene', spawnPoint: { x: 240, y: 212 }, x: 240, y: 252, width: 112, height: 28 },
-            { label: 'Стаята на Walter', targetScene: 'WalterRoomScene', spawnPoint: { x: 88, y: 112 }, x: 36, y: 112, width: 32, height: 96 },
-            { label: 'Работилница', targetScene: 'WorkshopScene', spawnPoint: { x: 240, y: 72 }, x: 240, y: 36, width: 112, height: 28 }
+            { label: 'Workshop', targetScene: 'WorkshopScene', spawnPoint: { x: 392, y: 112 }, x: 36, y: 112, width: 42, height: 120 },
+            { label: 'Arthur\'s Office', targetScene: 'OfficeScene', spawnPoint: { x: 240, y: 220 }, x: 240, y: 36, width: 140, height: 32, isElevator: true }
         ],
         characters: [
-            { id: 'sam', x: 382, y: 158 }
+            { id: 'sam', x: 382, y: 168 }
         ],
         clues: [
             {
                 id: 'walter-rails',
                 type: 'evidence',
-                title: 'Релси в стената',
-                description: 'Релсите водят от стаята на Walter до камината в кабинета на Arthur.',
-                details: 'Това е физическото доказателство, че Walter е могъл да стигне до заключения кабинет, без да използва вратата.',
+                title: 'Mechanical Rails',
+                description: 'Rails hidden in the walls leading from Walter\'s room to the office.',
+                details: 'This is how Walter reached the office without using the doors.',
                 icon: 'random/elevator.png',
                 x: 214,
                 y: 128,
-                width: 40,
+                width: 80,
                 height: 30,
                 visual: { type: 'image', image: 'random/elevator.png' }
             },
             {
                 id: 'remote-control',
                 type: 'device',
-                title: 'Дистанционно за резетата',
-                description: 'В ниша до релсите има дистанционно. То заключва резетата на кабинета отвътре.',
-                details: 'С това Walter е напуснал през тунела и е оставил заключена стая след себе си.',
+                title: 'Remote Control',
+                description: 'A device that locks and unlocks the office latches from the inside.',
+                details: 'This explains the "locked room" mystery.',
                 icon: 'random/door1open.png',
                 x: 292,
                 y: 128,
-                width: 32,
+                width: 40,
                 height: 38,
                 visual: { type: 'image', image: 'random/door1open.png' }
             },
             {
-                id: 'dna-report',
-                type: 'evidence',
-                title: 'ДНК и алкохолна проба на Sam',
-                description: 'Sam е имал над 2.5 промила алкохол и няма прясна кръв по дрехите.',
-                details: 'Той е искал Arthur мъртъв, но в тази нощ не е бил способен на прецизен удар и няма следи по оръжието.',
-                icon: 'random/bloodspot.png',
+                id: 'loan-shark-letter',
+                type: 'letter',
+                title: 'Loan Shark Letter',
+                description: 'A threatening letter addressed to Sam.',
+                details: 'Sam owes a lot of money. Arthur\'s death would solve his financial problems.',
+                icon: 'random/note.png',
                 x: 356,
                 y: 190,
-                width: 36,
-                height: 32,
-                visual: { type: 'image', image: 'random/bloodspot.png' }
+                width: 50,
+                height: 40,
+                visual: { type: 'image', image: 'random/photo2.png' }
             },
             {
-                id: 'clock-repair',
-                type: 'alibi',
-                title: 'Разглобен часовник на Ben',
-                description: 'В източното крило има разглобен часовник с пресни следи от масло.',
-                details: 'Ben няма свидетел, но материалната следа подкрепя разказа му по-добре от празно алиби.',
-                icon: 'decor/clock.png',
+                id: 'dna-sample',
+                type: 'evidence',
+                title: 'DNA Report',
+                description: 'A report on skin samples found under Arthur\'s fingernails.',
+                details: 'The DNA doesn\'t match any of the suspects. It seems the killer wore gloves.',
+                icon: 'random/bloodspot.png',
                 x: 108,
                 y: 190,
-                width: 30,
-                height: 38,
+                width: 50,
+                height: 40,
+                visual: { type: 'image', image: 'random/bloodspot.png' }
+            }
+        ]
+    },
+    office: {
+        key: 'OfficeScene',
+        title: 'Arthur\'s Office',
+        mapName: 'office',
+        accentColor: 0xb84a4a,
+        intro: 'The scene of the crime. The door was locked from the inside, yet the killer found a way.',
+        spawnPoint: { x: 392, y: 112 },
+        doors: [
+            { label: 'Secret Tunnel', targetScene: 'CellarScene', spawnPoint: { x: 240, y: 88 }, x: 240, y: 252, width: 140, height: 32, isElevator: true },
+            { label: 'Bedroom', targetScene: 'BedroomScene', spawnPoint: { x: 392, y: 112 }, x: 36, y: 112, width: 42, height: 120 }
+        ],
+        clues: [
+            {
+                id: 'arthur-body',
+                type: 'evidence',
+                title: 'Arthur\'s Corpse',
+                description: 'Arthur lies on the floor. A fillet knife is in his chest.',
+                details: 'He was stabbed from behind. The time of death was between 20:15 and 20:55.',
+                icon: 'characters/deadbody.png',
+                x: 240,
+                y: 200,
+                width: 60,
+                height: 30,
+                visual: { type: 'image', image: 'characters/deadbody.png' }
+            },
+            {
+                id: 'gold-key',
+                type: 'key',
+                title: 'Gold Key',
+                description: 'A tiny gold key found inside Arthur\'s pocket watch.',
+                details: 'It might open a small compartment.',
+                icon: 'decor/clock.png',
+                x: 160,
+                y: 210,
+                width: 40,
+                height: 30,
                 visual: { type: 'image', image: 'decor/clock.png' }
+            },
+            {
+                id: 'floor-panel-office',
+                type: 'lock',
+                title: 'Floor Panel',
+                description: 'A hidden panel near the desk. It requires a code.',
+                details: 'The code is 8241 (Death time 20:41 + Date of death).',
+                code: '8241',
+                icon: 'random/door2.png',
+                x: 374,
+                y: 220,
+                width: 60,
+                height: 40,
+                visual: { type: 'image', image: 'random/door2.png' }
+            },
+            {
+                id: 'arthur-note',
+                type: 'letter',
+                title: 'Arthur\'s Secret Note',
+                description: 'A note hidden in a drawer under a painting.',
+                details: '"I killed the man who claimed to be the true heir. It was a mistake. He was blackmailing me. If anyone reads this - do not seek the truth."',
+                requires: ['gold-key'],
+                icon: 'random/note.png',
+                x: 86,
+                y: 68,
+                width: 50,
+                height: 40,
+                visual: { type: 'image', image: 'random/photo1.png' }
+            },
+            {
+                id: 'knife-trace',
+                type: 'evidence',
+                title: 'Knife Sheath',
+                description: 'An empty sheath found in the desk drawer.',
+                details: 'It belongs to a fillet knife. Gordy claims one was stolen from the kitchen last week.',
+                icon: 'random/knivewithblood.png',
+                x: 330,
+                y: 92,
+                width: 50,
+                height: 40,
+                visual: { type: 'image', image: 'random/knive.png' }
+            }
+        ]
+    },
+    bedroom: {
+        key: 'BedroomScene',
+        title: 'Arthur\'s Bedroom',
+        mapName: 'bedroom',
+        accentColor: 0xaec6cf,
+        intro: 'A room full of trophies and luxury, built on a foundation of lies.',
+        spawnPoint: { x: 392, y: 112 },
+        doors: [
+            { label: 'Arthur\'s Office', targetScene: 'OfficeScene', spawnPoint: { x: 88, y: 112 }, x: 444, y: 112, width: 42, height: 120 },
+            { label: 'Walter\'s Room', targetScene: 'WalterRoomScene', spawnPoint: { x: 392, y: 112 }, x: 36, y: 112, width: 42, height: 120 }
+        ],
+        clues: [
+            {
+                id: 'silver-key',
+                type: 'key',
+                title: 'Silver Key',
+                description: 'A silver key found in the butler\'s pocket.',
+                details: 'Winston says Arthur gave it to him for safekeeping. It opens Arthur\'s desk.',
+                icon: 'office/chest.png',
+                x: 60,
+                y: 188,
+                width: 40,
+                height: 30,
+                visual: { type: 'image', image: 'office/chest.png' }
+            },
+            {
+                id: 'letter-eleanor',
+                type: 'letter',
+                title: 'Letter from Eleanor',
+                description: 'Locked inside Arthur\'s desk.',
+                details: '"Arthur killed our child. Our true son. He ran him over with his car. I told Walter. He couldn\'t forgive."',
+                requires: ['silver-key'],
+                icon: 'random/note.png',
+                x: 164,
+                y: 184,
+                width: 60,
+                height: 40,
+                visual: { type: 'image', image: 'bedroom/desk.png' }
+            },
+            {
+                id: 'bed-arthur',
+                type: 'decor',
+                title: 'Arthur\'s Bed',
+                description: 'A luxurious bed.',
+                details: 'Nothing unusual here.',
+                x: 240,
+                y: 120,
+                width: 42,
+                height: 32,
+                visual: { type: 'image', image: 'bedroom/bed.png' }
+            },
+            {
+                id: 'forged-will',
+                type: 'document',
+                title: 'Forged Will',
+                description: 'A draft of a will making Arthur the sole heir.',
+                details: 'Clara was planning to sue Arthur over this. It gives her a motive, but she needed him alive for the trial.',
+                icon: 'random/notebook.png',
+                x: 330,
+                y: 92,
+                width: 60,
+                height: 40,
+                visual: { type: 'image', image: 'random/notebook.png' }
+            },
+            {
+                id: 'ben-threat',
+                type: 'document',
+                title: 'Threat to Ben',
+                description: 'A letter from Arthur to Ben, threatening to frame him for a crime.',
+                details: 'Ben stayed in the east wing because he was afraid of Arthur.',
+                icon: 'random/note.png',
+                x: 112,
+                y: 92,
+                width: 50,
+                height: 40,
+                visual: { type: 'image', image: 'random/note.png' }
+            }
+        ]
+    },
+    walterRoom: {
+        key: 'WalterRoomScene',
+        title: 'Walter\'s Room',
+        mapName: 'walter-room',
+        accentColor: 0x9aa3a8,
+        intro: 'The air is stale. The grandfather of the house sits here, a shadow of his former self.',
+        spawnPoint: { x: 392, y: 112 },
+        doors: [
+            { label: 'Arthur\'s Bedroom', targetScene: 'BedroomScene', spawnPoint: { x: 88, y: 112 }, x: 444, y: 112, width: 42, height: 120 },
+            { label: 'Eleanor\'s Room', targetScene: 'EleanorRoomScene', spawnPoint: { x: 392, y: 112 }, x: 36, y: 112, width: 42, height: 120 }
+        ],
+        characters: [
+            { id: 'walter', x: 246, y: 158 }
+        ],
+        clues: [
+            {
+                id: 'rusty-key',
+                type: 'key',
+                title: 'Rusty Key',
+                description: 'A rusty key hidden under Walter\'s pillow.',
+                details: 'It opens the door in the cellar behind the boiler.',
+                icon: 'office/chest.png',
+                x: 232,
+                y: 108,
+                width: 40,
+                height: 30,
+                visual: { type: 'image', image: 'office/box.png' }
+            },
+            {
+                id: 'birth-certificate',
+                type: 'document',
+                title: 'Birth Certificate',
+                description: 'A hidden birth certificate for Daniel Gray.',
+                details: 'Found in Walter\'s safe. Code: 1947-10-12.',
+                code: '1947-10-12',
+                icon: 'random/notebook.png',
+                x: 374,
+                y: 88,
+                width: 60,
+                height: 40,
+                visual: { type: 'image', image: 'office/chest.png' }
+            },
+            {
+                id: 'walter-shoes',
+                type: 'evidence',
+                title: 'Muddy Shoes',
+                description: 'A pair of shoes found under Walter\'s bed.',
+                details: 'They are covered in dust from the cellar tunnels. Why would an invalid have muddy shoes?',
+                icon: 'random/bloodfoodsteps.png',
+                x: 140,
+                y: 190,
+                width: 50,
+                height: 40,
+                visual: { type: 'image', image: 'random/foodsteps.png' }
+            }
+        ]
+    },
+    eleanorRoom: {
+        key: 'EleanorRoomScene',
+        title: 'Eleanor\'s Room',
+        mapName: 'eleanor-room',
+        accentColor: 0xcd9f92,
+        intro: 'Elegance and decay. Eleanor remembers more than she lets on.',
+        spawnPoint: { x: 392, y: 112 },
+        doors: [
+            { label: 'Walter\'s Room', targetScene: 'WalterRoomScene', spawnPoint: { x: 88, y: 112 }, x: 444, y: 112, width: 42, height: 120 },
+            { label: 'Dining Room', targetScene: 'DiningRoomScene', spawnPoint: { x: 392, y: 112 }, x: 36, y: 112, width: 42, height: 120 }
+        ],
+        characters: [
+            { id: 'eleanor', x: 238, y: 162 }
+        ],
+        clues: [
+            {
+                id: 'martha-letter',
+                type: 'letter',
+                title: 'Martha\'s Letter',
+                description: 'A letter from Martha to her daughter, hidden in Eleanor\'s jewelry box.',
+                details: '"I saw Arthur last night. He was drunk. He said he would kill the butler. I was so scared. There was blood on my sleeve... I think it was his." The box has a code: 1123.',
+                code: '1123',
+                icon: 'random/note.png',
+                x: 126,
+                y: 102,
+                width: 60,
+                height: 40,
+                visual: { type: 'image', image: 'decor/picture2.png' }
+            },
+            {
+                id: 'blood-stain-martha',
+                type: 'evidence',
+                title: 'Blood on Sleeve',
+                description: 'A fresh blood stain on Martha\'s uniform.',
+                details: 'She says she fainted and fell near the body. The pattern supports her story.',
+                icon: 'random/bloodspot2.png',
+                x: 332,
+                y: 180,
+                width: 50,
+                height: 40,
+                visual: { type: 'image', image: 'random/bloodspot2.png' }
+            }
+        ]
+    },
+    diningRoom: {
+        key: 'DiningRoomScene',
+        title: 'Dining Room',
+        mapName: 'dining-room',
+        accentColor: 0xc9a05a,
+        intro: 'The silver is polished to a shine. A perfect facade for a broken family.',
+        spawnPoint: { x: 392, y: 112 },
+        doors: [
+            { label: 'Eleanor\'s Room', targetScene: 'EleanorRoomScene', spawnPoint: { x: 88, y: 112 }, x: 444, y: 112, width: 42, height: 120 },
+            { label: 'Main Hall', targetScene: 'LivingRoomScene', spawnPoint: { x: 240, y: 220 }, x: 240, y: 36, width: 140, height: 32, isElevator: true }
+        ],
+        characters: [
+            { id: 'winston', x: 146, y: 178 },
+            { id: 'clara', x: 338, y: 178 }
+        ],
+        clues: [
+            {
+                id: 'magnifier',
+                type: 'tool',
+                title: 'Magnifying Glass',
+                description: 'A small glass useful for inspecting tiny details.',
+                details: 'Use it on the "Deer in the Forest" painting.',
+                icon: 'bathroom/mirror.png',
+                x: 240,
+                y: 148,
+                width: 40,
+                height: 30,
+                visual: { type: 'image', image: 'bathroom/mirror.png' }
+            },
+            {
+                id: 'microfilm-deer',
+                type: 'film',
+                title: 'Microfilm',
+                description: 'Hidden in the deer\'s eye in the painting.',
+                details: 'The microfilm shows a police report from Daniel Gray\'s crash. The car belonged to Arthur.',
+                requires: ['magnifier'],
+                icon: 'decor/picture3.png',
+                x: 394,
+                y: 74,
+                width: 60,
+                height: 40,
+                visual: { type: 'image', image: 'decor/picture3.png' }
+            },
+            {
+                id: 'library-alibi',
+                type: 'alibi',
+                title: 'Library Receipt',
+                description: 'A receipt showing Clara was in the library at 21:00.',
+                details: 'It confirms Winston\'s statement about seeing her leave.',
+                icon: 'office/bookshelf.png',
+                x: 146,
+                y: 206,
+                width: 50,
+                height: 40,
+                visual: { type: 'image', image: 'office/bookshelf.png' }
             }
         ]
     }
 }
-
-const CYRILLIC_PATTERN = /[\u0400-\u04FF]/
-
-function toTitleFromId(id) {
-    return id
-        .split('-')
-        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-        .join(' ')
-}
-
-Object.values(roomConfigs).forEach(room => {
-    room.clues.forEach(clue => {
-        if (CYRILLIC_PATTERN.test(clue.title ?? '')) {
-            clue.title = toTitleFromId(clue.id)
-        }
-
-        if (CYRILLIC_PATTERN.test(clue.description ?? '')) {
-            clue.description = `Evidence item: ${toTitleFromId(clue.id)}.`
-        }
-
-        if (CYRILLIC_PATTERN.test(clue.details ?? '')) {
-            clue.details = 'This clue has been logged in English. Review related evidence to connect the full timeline.'
-        }
-
-        if (CYRILLIC_PATTERN.test(clue.lockedText ?? '')) {
-            clue.lockedText = 'This clue cannot be accessed yet. Required item or code is missing.'
-        }
-    })
-})
 
 export const TOTAL_CLUES = Object.values(roomConfigs)
     .reduce((sum, room) => sum + room.clues.length, 0)

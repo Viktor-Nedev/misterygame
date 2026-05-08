@@ -130,3 +130,11 @@
 [2m5:46:04 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mscenes/DossierScene.js[22m
 [2m5:46:13 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mscenes/RoomScene.js[22m
 [2m5:48:39 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mscenes/roomConfigs.js[22m
+[2m9:29:10 PM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22mScene key not found: LivingRoomScene
+[2m9:29:59 PM[22m [36m[1m[vite][22m[39m [32mvite.config.js changed, restarting server...[39m
+Port 5173 is in use, trying another one...
+[2m9:29:59 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m Re-optimizing dependencies because vite config has changed
+[2m9:29:59 PM[22m [36m[1m[vite][22m[39m server restarted.
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m5174[22m/[39m
+[2m9:30:01 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [optimizer] bundling dependencies...

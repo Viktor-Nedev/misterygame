@@ -1,3 +1,9 @@
 export default {
-    publicDir: 'assets'
+    publicDir: 'assets',
+    server: {
+        host: true,
+        hmr: {
+            host: 'localhost'
+        }
+    }
 }
