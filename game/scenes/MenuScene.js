@@ -24,13 +24,13 @@ export default class MenuScene extends Phaser.Scene {
         this.grain = this.add.rectangle(0, 0, 0, 0, 0xf8f4eb, 0.035)
             .setOrigin(0, 0)
 
-        this.kicker = this.add.text(0, 0, '', {
+        this.kicker = this.add.text(0, 0, 'Vermont, November 2, 1987', {
             fontFamily: '"Special Elite", "Courier New", monospace',
             fontSize: '18px',
             color: '#d8b56d'
         }).setOrigin(0.5)
 
-        this.title = this.add.text(0, 0, 'ANGEL OF THE\nBLACKWOOD MANOR', {
+        this.title = this.add.text(0, 0, 'MYSTERY OF THE\nBLACKWOOD MANOR', {
             fontFamily: '"Cormorant Garamond", Georgia, serif',
             fontSize: '72px',
             fontStyle: '700',

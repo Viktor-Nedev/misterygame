@@ -1,6 +1,25 @@
 const _sceneMaps = new Map()
 const _wallGroups = new Map()
 
+function isSolidFurniture(src) {
+    if (!src) return false
+
+    // Non-solid decor: wall hangings, floor rugs, doors.
+    const nonSolidPatterns = [
+        /carpet/i,
+        /rug/i,
+        /mat/i,
+        /picture/i,
+        /painting/i,
+        /mirror/i,
+        /clock/i,
+        /door/i,
+        /window/i
+    ]
+
+    return !nonSolidPatterns.some(pattern => pattern.test(src))
+}
+
 function getMapsForScene(scene) {
     const key = scene.sys.settings.key
 
@@ -18,10 +37,12 @@ export const manager = {
 
     preload(scene) {
         for (const mapName of getMapsForScene(scene)) {
-            scene.load.json(mapName, `maps/${mapName}.json`)
+            scene.load.json(mapName, `assets/maps/${mapName}.json`)
             scene.load.once(`filecomplete-json-${mapName}`, () => {
                 const mapData = scene.cache.json.get(mapName)
-                const tilesetUrl = mapData.tileset.replace(/^assets\//, '')
+                if (!mapData) return
+
+                const tilesetUrl = `assets/${mapData.tileset.replace(/^assets\//, '')}`
 
                 scene.load.spritesheet(`${mapName}_tileset`, tilesetUrl, {
                     frameWidth: mapData.tileSize,
@@ -40,7 +61,7 @@ export const manager = {
                     const key = `${mapName}_furniture_${src}`
 
                     if (!scene.textures.exists(key)) {
-                        scene.load.image(key, src.replace(/^assets\//, ''))
+                        scene.load.image(key, `assets/${src.replace(/^assets\//, '')}`)
                     }
                 })
             })
@@ -50,6 +71,8 @@ export const manager = {
     create(scene) {
         for (const mapName of getMapsForScene(scene)) {
             const mapData = scene.cache.json.get(mapName)
+            if (!mapData) continue
+
             const { tileSize, layers, collisions } = mapData
             const tilesetKey = `${mapName}_tileset`
 
@@ -70,7 +93,22 @@ export const manager = {
             })
 
             const furniture = layers.furniture ?? []
+
+            const wallGroup = scene.physics.add.staticGroup()
+            ;(collisions ?? []).forEach(({ x, y, w, h }) => {
+                const rect = scene.add.rectangle(x + w / 2, y + h / 2, w, h)
+                    .setVisible(false)
+
+                scene.physics.add.existing(rect, true)
+                wallGroup.add(rect)
+            })
+
             furniture.forEach(({ src, x, y, w, h }) => {
+                if (/door|elevator/i.test(src)) {
+                    // Doors are rendered by RoomScene so we don't duplicate images per room.
+                    return
+                }
+
                 const key = `${mapName}_furniture_${src}`
 
                 if (!scene.textures.exists(key)) {
@@ -81,15 +119,23 @@ export const manager = {
                     .setOrigin(0.5, 0.5)
                     .setDisplaySize(w, h)
                     .setDepth(1.2)
-            })
 
-            const wallGroup = scene.physics.add.staticGroup()
-            ;(collisions ?? []).forEach(({ x, y, w, h }) => {
-                const rect = scene.add.rectangle(x + w / 2, y + h / 2, w, h)
-                    .setVisible(false)
+                if (isSolidFurniture(src)) {
+                    const footprintHeight = Math.max(10, Math.round(h * 0.35))
+                    const footprintWidth = Math.max(10, Math.round(w * 0.9))
+                    const footprintX = x + (w - footprintWidth) / 2
+                    const footprintY = y + h - footprintHeight
 
-                scene.physics.add.existing(rect, true)
-                wallGroup.add(rect)
+                    const collider = scene.add.rectangle(
+                        footprintX + footprintWidth / 2,
+                        footprintY + footprintHeight / 2,
+                        footprintWidth,
+                        footprintHeight
+                    ).setVisible(false)
+
+                    scene.physics.add.existing(collider, true)
+                    wallGroup.add(collider)
+                }
             })
 
             _wallGroups.set(`${scene.sys.settings.key}:${mapName}`, wallGroup)

@@ -15,7 +15,6 @@ import {
     getSuspectDialogue,
     hasAllItems,
     hasItem,
-    resolveEnding,
     saveNotes,
     selectInventoryItem
 } from './gameState.js'
@@ -58,11 +57,11 @@ export default class RoomScene extends Scene {
         this.preloadConfiguredAssets()
 
         if (!this.textures.exists('room-door')) {
-            this.load.image('room-door', 'random/door.png')
+            this.load.image('room-door', 'assets/random/door.png')
         }
 
         if (!this.textures.exists('ash-officer')) {
-            this.load.spritesheet('ash-officer', 'sprites/ash.png', {
+            this.load.spritesheet('ash-officer', 'assets/sprites/ash.png', {
                 frameWidth: 32,
                 frameHeight: 64
             })
@@ -83,7 +82,7 @@ export default class RoomScene extends Scene {
             }
 
             queued.add(key)
-            this.load.image(key, path)
+            this.load.image(key, `assets/${path}`)
         }
 
         this.roomConfig.clues.forEach(clue => {
@@ -91,15 +90,17 @@ export default class RoomScene extends Scene {
             loadAsset(clue.visual?.image)
         })
 
-        ;(this.roomConfig.characters ?? []).forEach(character => {
-            loadAsset(SUSPECTS[character.id]?.portrait)
-        })
+            ; (this.roomConfig.characters ?? []).forEach(character => {
+                loadAsset(SUSPECTS[character.id]?.portrait)
+            })
 
-        ;(this.roomConfig.doors ?? []).forEach(door => {
-            if (door.isElevator) loadAsset('random/elevator.png')
+        // Accusation screen needs all portraits available, regardless of current room.
+        Object.values(SUSPECTS).forEach(suspect => {
+            loadAsset(suspect.portrait)
         })
 
         loadAsset('characters/gradinar.png')
+        loadAsset('random/elevator.png')
     }
 
     create() {
@@ -108,6 +109,9 @@ export default class RoomScene extends Scene {
         this.renderWallLayer()
 
         this.state = getGameState()
+        if (typeof this.state.musicVolume !== 'number') {
+            this.state.musicVolume = 0.5
+        }
         this.clues = this.state.clues
         this.currentDoor = null
         this.currentClue = null
@@ -125,7 +129,6 @@ export default class RoomScene extends Scene {
         this.configureCamera()
 
         this.lia.sprite.setPosition(this.spawnPoint.x, this.spawnPoint.y)
-        this.lia.sprite.setDepth(7)
         this.lia.sprite.setScale(0.5)
         this.lia.sprite.setCollideWorldBounds(true)
         this.lia.sprite.body.setSize(18, 22)
@@ -202,7 +205,7 @@ export default class RoomScene extends Scene {
         this.doors = this.roomConfig.doors.map(door => {
             const isElevator = !!door.isElevator
             const asset = isElevator ? assetKey('random/elevator.png') : 'room-door'
-            
+
             const sprite = this.add.image(door.x, door.y, asset)
                 .setDepth(6)
                 .setDisplaySize(door.width, door.height)
@@ -237,29 +240,41 @@ export default class RoomScene extends Scene {
     }
 
     createClueObjects() {
+        const mapData = this.cache.json.get(this.roomConfig.mapName)
+        const furnitureSrcs = new Set((mapData?.layers?.furniture ?? []).map(item => item.src))
+
         this.clueObjects = this.roomConfig.clues.map(clue => {
-            const collected = this.clues.includes(clue.id)
             let visual
+            let baseScale = 1
 
             switch (clue.visual?.type) {
-            case 'image':
-                visual = this.add.image(clue.x, clue.y, assetKey(clue.visual.image))
-                    .setDisplaySize(clue.width, clue.height)
-                break
-            default:
-                visual = this.add.rectangle(
-                    clue.x,
-                    clue.y,
-                    clue.width,
-                    clue.height,
-                    clue.color ?? 0xd8b56d,
-                    0.96
-                )
+                case 'image':
+                    if (furnitureSrcs.has(clue.visual.image)) {
+                        // The clue is already rendered as map furniture; don't draw a second copy on top.
+                        visual = this.add.rectangle(clue.x, clue.y, clue.width, clue.height, 0xffffff, 0)
+                            .setVisible(false)
+                    } else {
+                        visual = this.add.image(clue.x, clue.y, assetKey(clue.visual.image))
+                            .setDisplaySize(clue.width, clue.height)
+                            .setDepth(1.25)
+                    }
+                    break
+                default:
+                    visual = this.add.rectangle(
+                        clue.x,
+                        clue.y,
+                        clue.width,
+                        clue.height,
+                        clue.color ?? 0xd8b56d,
+                        0.96
+                    )
             }
 
-            visual.setDepth(5.8)
             this.physics.add.existing(visual, true)
-            this.physics.add.collider(this.lia.sprite, visual)
+            // Only block movement if the clue has its own visible world object.
+            if (visual.visible) {
+                this.physics.add.collider(this.lia.sprite, visual)
+            }
 
             const zone = this.add.zone(clue.x, clue.y, clue.width + 16, clue.height + 16)
             this.physics.add.existing(zone, true)
@@ -268,7 +283,7 @@ export default class RoomScene extends Scene {
                 ...clue,
                 visual,
                 zone,
-                baseScale: 1,
+                baseScale,
                 lastSeenAt: -Infinity
             }
 
@@ -284,8 +299,10 @@ export default class RoomScene extends Scene {
         this.characterObjects = (this.roomConfig.characters ?? []).map(character => {
             const suspect = SUSPECTS[character.id]
             const sprite = this.add.image(character.x, character.y, assetKey(suspect.portrait))
-                .setDepth(8.8)
-                .setDisplaySize(14, 24)
+
+            // Calculate base scale for characters (approx 32px height)
+            const baseScale = 32 / sprite.height
+            sprite.setScale(baseScale)
 
             this.physics.add.existing(sprite, true)
             this.physics.add.collider(this.lia.sprite, sprite)
@@ -297,7 +314,7 @@ export default class RoomScene extends Scene {
                 ...character,
                 zone,
                 sprite,
-                baseScale: 1,
+                baseScale,
                 lastSeenAt: -Infinity
             }
 
@@ -325,7 +342,8 @@ export default class RoomScene extends Scene {
     }
 
     createOverlay() {
-        this.overlayContainer = this.add.container(0, 0).setScrollFactor(0).setDepth(40)
+        // UI must always render above the y-sorted world objects (which use y as depth).
+        this.overlayContainer = this.add.container(0, 0).setScrollFactor(0).setDepth(10000)
 
         this.header = this.add.rectangle(0, 0, 480, 42, 0x140e0a, 0.96).setOrigin(0, 0)
         this.overlayContainer.add(this.header)
@@ -341,18 +359,18 @@ export default class RoomScene extends Scene {
         this.accusationButton = this.add.rectangle(350, 21, 100, 26, 0x9f2d22, 0.8)
             .setInteractive({ useHandCursor: true })
             .on('pointerdown', () => this.handleFinal())
-        
+
         this.accusationText = this.add.text(350, 21, 'ACCUSE', {
             fontFamily: 'Manrope, sans-serif',
             fontSize: '11px',
             fontStyle: '800',
             color: '#ffffff'
         }).setOrigin(0.5)
-        
+
         this.settingsButton = this.add.rectangle(440, 21, 60, 26, 0x35261c, 0.8)
             .setInteractive({ useHandCursor: true })
             .on('pointerdown', () => this.showSettings())
-        
+
         this.settingsText = this.add.text(440, 21, 'SET', {
             fontFamily: 'Manrope, sans-serif',
             fontSize: '11px',
@@ -360,7 +378,24 @@ export default class RoomScene extends Scene {
             color: '#ead8b8'
         }).setOrigin(0.5)
 
-        this.overlayContainer.add([this.accusationButton, this.accusationText, this.settingsButton, this.settingsText])
+        this.notesButton = this.add.rectangle(0, 21, 70, 26, 0x2b2018, 0.86)
+            .setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => this.toggleNotes())
+        this.notesText = this.add.text(0, 21, 'NOTES', {
+            fontFamily: 'Manrope, sans-serif',
+            fontSize: '11px',
+            fontStyle: '800',
+            color: '#ead8b8'
+        }).setOrigin(0.5)
+
+        this.overlayContainer.add([
+            this.accusationButton,
+            this.accusationText,
+            this.settingsButton,
+            this.settingsText,
+            this.notesButton,
+            this.notesText
+        ])
 
         this.inventoryBar = this.add.rectangle(0, 288, 480, 42, 0x140e0a, 0.92).setOrigin(0, 1)
         this.overlayContainer.add(this.inventoryBar)
@@ -378,21 +413,73 @@ export default class RoomScene extends Scene {
             color: '#f0dcc1',
             align: 'right',
             wordWrap: { width: 300 }
-        }).setOrigin(1, 0).setScrollFactor(0).setDepth(45)
+        }).setOrigin(1, 0).setScrollFactor(0).setDepth(10020)
+
+        // Clue preview panel - shows clue content automatically when approaching
+        this.cluePreviewBackdrop = this.add.rectangle(240, 144, 500, 300, 0x000000, 0.7)
+            .setScrollFactor(0).setDepth(10050).setVisible(false)
+
+        this.cluePreviewPaper = this.add.rectangle(240, 144, 480, 280, 0xfdfbf7, 1)
+            .setStrokeStyle(2, 0xc1b299, 0.8)
+            .setScrollFactor(0).setDepth(10051).setVisible(false)
+
+        this.cluePreviewTitle = this.add.text(240, 70, '', {
+            fontFamily: '"Cormorant Garamond", Georgia, serif',
+            fontSize: '22px',
+            fontStyle: '700',
+            color: '#20150f',
+            align: 'center',
+            wordWrap: { width: 420 }
+        }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(10052).setVisible(false)
+
+        this.cluePreviewDesc = this.add.text(240, 105, '', {
+            fontFamily: '"Libre Baskerville", Georgia, serif',
+            fontSize: '18px',
+            color: '#35261c',
+            align: 'center',
+            lineSpacing: 6,
+            wordWrap: { width: 440 }
+        }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(10052).setVisible(false)
+
+        this.cluePreviewDetails = this.add.text(240, 150, '', {
+            fontFamily: '"Libre Baskerville", Georgia, serif',
+            fontSize: '16px',
+            color: '#5a4a3a',
+            align: 'center',
+            lineSpacing: 5,
+            wordWrap: { width: 440 }
+        }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(10052).setVisible(false)
+
+        this.cluePreviewHint = this.add.text(240, 260, 'Press E to collect • Esc to close', {
+            fontFamily: '"Manrope", Arial, sans-serif',
+            fontSize: '14px',
+            fontStyle: '700',
+            color: '#8b7355',
+            align: 'center'
+        }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(10052).setVisible(false)
+
+        this.cluePreviewImage = this.add.image(240, 130, 'room-door')
+            .setScrollFactor(0).setDepth(10053).setVisible(false).setOrigin(0.5)
+
+        this.cluePreviewImageBg = this.add.rectangle(240, 130, 90, 90, 0xfcfbf8, 1)
+            .setStrokeStyle(1, 0x9b7a48, 0.4)
+            .setScrollFactor(0).setDepth(10052.5).setVisible(false).setOrigin(0.5)
 
         this.modalBackdrop = this.add.rectangle(240, 144, 480, 288, 0x000000, 0.62)
-            .setScrollFactor(0).setDepth(41).setVisible(false)
+            .setScrollFactor(0).setDepth(10100).setVisible(false)
+        // Ensure the dim layer doesn't steal clicks from the modal contents.
+        this.modalBackdrop.disableInteractive()
 
         this.modalShadow = this.add.rectangle(244, 148, 474, 294, 0x000000, 0.3)
-            .setScrollFactor(0).setDepth(41.5).setVisible(false)
+            .setScrollFactor(0).setDepth(10101).setVisible(false)
 
         this.modalPaperBack = this.add.rectangle(240, 144, 460, 280, 0xffffff, 0.1)
-            .setScrollFactor(0).setDepth(41.8).setVisible(false)
+            .setScrollFactor(0).setDepth(10102).setVisible(false)
 
         this.modalFolder = this.add.rectangle(240, 144, 470, 290, 0xfdfbf7, 1)
             .setStrokeStyle(1, 0xc1b299, 0.6)
             .setScrollFactor(0)
-            .setDepth(42)
+            .setDepth(10103)
             .setVisible(false)
 
         this.modalStamp = this.add.text(240, 60, 'EVIDENCE FILE', {
@@ -400,7 +487,7 @@ export default class RoomScene extends Scene {
             fontSize: '14px',
             fontStyle: '700',
             color: '#9f2d22'
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(43).setVisible(false)
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(10104).setVisible(false)
 
         this.modalTitle = this.add.text(240, 85, '', {
             fontFamily: '"Cormorant Garamond", Georgia, serif',
@@ -409,7 +496,7 @@ export default class RoomScene extends Scene {
             color: '#20150f',
             align: 'center',
             wordWrap: { width: 400 }
-        }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(43).setVisible(false)
+        }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(10105).setVisible(false)
 
         this.modalBody = this.add.text(240, 125, '', {
             fontFamily: '"Libre Baskerville", Georgia, serif',
@@ -418,7 +505,7 @@ export default class RoomScene extends Scene {
             align: 'center',
             lineSpacing: 6,
             wordWrap: { width: 420 }
-        }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(43).setVisible(false)
+        }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(10105).setVisible(false)
 
         this.modalFooter = this.add.text(240, 260, '', {
             fontFamily: '"Manrope", Arial, sans-serif',
@@ -427,11 +514,121 @@ export default class RoomScene extends Scene {
             color: '#6d5235',
             align: 'center',
             wordWrap: { width: 500 }
-        }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(43).setVisible(false)
-        
-        this.modalMurdererPhoto = this.add.image(240, 180, 'room-door').setVisible(false).setDepth(44).setScale(2)
+        }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(10105).setVisible(false)
+
+        this.modalMurdererPhoto = this.add.image(240, 180, 'room-door').setVisible(false).setDepth(10106).setScale(2)
+
+        this.modalClueImageBg = this.add.rectangle(240, 160, 100, 100, 0xfcfbf8, 1)
+            .setStrokeStyle(1, 0x9b7a48, 0.4)
+            .setScrollFactor(0).setDepth(10105.5).setVisible(false).setOrigin(0.5)
+
+        this.modalClueImage = this.add.image(240, 160, 'room-door')
+            .setScrollFactor(0).setDepth(10106).setVisible(false).setOrigin(0.5)
+
+        // Settings slider (Phaser-native so it scales with zoom)
+        this.settingsSliderTrack = this.add.rectangle(240, 150, 220, 10, 0x2b2018, 0.35)
+            .setStrokeStyle(1, 0x8c6e45, 0.55)
+            .setScrollFactor(0)
+            .setDepth(10106.2)
+            .setVisible(false)
+            .setInteractive({ useHandCursor: true })
+            .on('pointerdown', pointer => {
+                if (this.modalMode !== 'settings') return
+                this.updateMusicVolumeFromDrag(pointer.worldX)
+            })
+
+        this.settingsSliderFill = this.add.rectangle(240, 150, 0, 10, 0x9f2d22, 0.55)
+            .setScrollFactor(0)
+            .setDepth(10106.25)
+            .setOrigin(0, 0.5)
+            .setVisible(false)
+
+        this.settingsSliderHandle = this.add.rectangle(240, 150, 14, 18, 0xf8f4eb, 0.95)
+            .setStrokeStyle(1, 0x6d5235, 0.8)
+            .setScrollFactor(0)
+            .setDepth(10106.3)
+            .setVisible(false)
+            .setInteractive({ useHandCursor: true, draggable: true })
+
+        this.input.setDraggable(this.settingsSliderHandle)
+        this.settingsSliderHandle.on('drag', (_pointer, dragX) => {
+            if (this.modalMode !== 'settings') return
+            this.updateMusicVolumeFromDrag(dragX)
+        })
+
+        // Accusation grid (portraits)
+        const accuseOrder = [
+            'martha',
+            'gordy',
+            'eddie',
+            'eleanor',
+            'winston',
+            'sam',
+            'clara',
+            'ben',
+            'walter'
+        ].filter(id => SUSPECTS[id])
+
+        this.accuseCards = accuseOrder.map((id, index) => {
+            const suspect = SUSPECTS[id]
+            const bg = this.add.rectangle(0, 0, 84, 92, 0x241a13, 0.92)
+                .setStrokeStyle(1, 0x8d7350, 0.86)
+                .setScrollFactor(0)
+                .setDepth(10106.5)
+                .setVisible(false)
+                .setInteractive({ useHandCursor: true })
+
+            const portrait = this.add.image(0, 0, assetKey(suspect.portrait))
+                .setScrollFactor(0)
+                .setDepth(10106.6)
+                .setVisible(false)
+
+            const label = this.add.text(0, 0, `${index + 1}. ${suspect.name}`, {
+                fontFamily: '"Manrope", Arial, sans-serif',
+                fontSize: '10px',
+                fontStyle: '700',
+                color: '#20150f',
+                align: 'center',
+                wordWrap: { width: 86 }
+            })
+                .setOrigin(0.5, 0)
+                .setScrollFactor(0)
+                .setDepth(10106.7)
+                .setVisible(false)
+
+            const choose = () => this.chooseAccusedSuspect(id)
+            bg.on('pointerdown', choose)
+            portrait.setInteractive({ useHandCursor: true }).on('pointerdown', choose)
+            label.setInteractive({ useHandCursor: true }).on('pointerdown', choose)
+
+            return { id, bg, portrait, label }
+        })
 
         this.createNotesPanel()
+    }
+
+    updateMusicVolumeFromDrag(dragX) {
+        const { leftWorld, widthWorld } = this.settingsSliderBounds ?? { leftWorld: 0, widthWorld: 1 }
+        const clamped = Phaser.Math.Clamp(dragX, leftWorld, leftWorld + widthWorld)
+        const t = Phaser.Math.Clamp((clamped - leftWorld) / widthWorld, 0, 1)
+        this.state.musicVolume = t
+        this.updateSettingsSlider()
+    }
+
+    updateSettingsSlider() {
+        if (!this.settingsSliderBounds) return
+        const t = Phaser.Math.Clamp(this.state.musicVolume ?? 0.5, 0, 1)
+        const { leftWorld, widthWorld, widthPx, yWorld } = this.settingsSliderBounds
+        const x = leftWorld + widthWorld * t
+
+        this.settingsSliderHandle.setPosition(x, yWorld)
+        this.settingsSliderFill.setPosition(leftWorld, yWorld)
+        this.settingsSliderFill.width = Math.max(2, widthPx * t)
+
+        // Keep the modal body text updated with the current volume.
+        if (this.modalMode === 'settings') {
+            this.modalBody.setText(this.getSettingsText())
+        }
     }
 
     createNotesPanel() {
@@ -450,7 +647,7 @@ export default class RoomScene extends Scene {
                 <textarea spellcheck="false" placeholder="Alibis, codes, links...">${escapeHtml(savedNotes)}</textarea>
             </div>
         `)
-        this.notesDom.setScrollFactor(0).setDepth(70).setVisible(false)
+        this.notesDom.setScrollFactor(0).setDepth(10150).setVisible(false)
 
         const element = this.notesDom.node
         this.notesTextarea = element.querySelector('textarea')
@@ -471,7 +668,7 @@ export default class RoomScene extends Scene {
 
     bindInput() {
         this.handleInteract = () => {
-            if (this.modalMode === 'notes' || this.modalMode === 'code' || this.modalMode === 'final-choice') {
+            if (this.modalMode === 'notes' || this.modalMode === 'code') {
                 return
             }
 
@@ -504,11 +701,6 @@ export default class RoomScene extends Scene {
                 return
             }
 
-            if (this.modalMode === 'final-choice') {
-                this.hideModal()
-                return
-            }
-
             if (this.modalMode) {
                 this.hideModal()
                 return
@@ -520,7 +712,7 @@ export default class RoomScene extends Scene {
                 return
             }
 
-            this.showFinalChoiceModal()
+            this.showAccusationModal()
         }
 
         this.handleEscape = () => {
@@ -531,6 +723,12 @@ export default class RoomScene extends Scene {
 
             if (this.modalMode) {
                 this.hideModal()
+                return
+            }
+
+            // Close clue preview with Esc
+            if (this.cluePreviewVisible) {
+                this.hideCluePreview()
             }
         }
 
@@ -542,6 +740,7 @@ export default class RoomScene extends Scene {
         this.handleKeydown = event => this.handleCodeInput(event)
 
         this.input.keyboard.on('keydown-E', this.handleInteract)
+        this.input.keyboard.on('keydown-ENTER', this.handleInteract)
         this.input.keyboard.on('keydown-F', this.handleFinal)
         this.input.keyboard.on('keydown-ESC', this.handleEscape)
         this.input.keyboard.on('keydown-ONE', this.handleChoice1)
@@ -553,6 +752,7 @@ export default class RoomScene extends Scene {
 
         this.events.once('shutdown', () => {
             this.input.keyboard.off('keydown-E', this.handleInteract)
+            this.input.keyboard.off('keydown-ENTER', this.handleInteract)
             this.input.keyboard.off('keydown-F', this.handleFinal)
             this.input.keyboard.off('keydown-ESC', this.handleEscape)
             this.input.keyboard.off('keydown-ONE', this.handleChoice1)
@@ -569,7 +769,7 @@ export default class RoomScene extends Scene {
             this.showModal(
                 clue.title,
                 clue.lockedText ?? 'This clue cannot be examined yet. A required item is missing.',
-                'Press E or Esc to continue.',
+                'Press E / Enter or Esc to continue.',
                 'clue'
             )
             return
@@ -600,8 +800,9 @@ export default class RoomScene extends Scene {
         this.showModal(
             clue.title,
             `${clue.description}\n\n${clue.details ?? ''}\n\n${statusText}`,
-            'Press E, F, or Esc. Click an inventory icon to reopen it.',
-            'clue'
+            'Press E / Enter, F, or Esc. Click an inventory icon to reopen it.',
+            'clue',
+            { visual: clue.visual, icon: clue.icon }
         )
 
         this.updateHeader()
@@ -624,8 +825,9 @@ export default class RoomScene extends Scene {
         this.showModal(
             `${suspect.name} - ${suspect.role}, ${suspect.age}`,
             `${suspect.text}\n\nAlibi: ${suspect.alibi}`,
-            'Press N to save this to notes. E or Esc closes.',
-            'interview'
+            'Press N to save this to notes. E / Enter or Esc closes.',
+            'interview',
+            { portrait: suspect.portrait }
         )
     }
 
@@ -678,7 +880,7 @@ export default class RoomScene extends Scene {
         const codePreview = this.codeInput || '...'
         const isDoor = this.modalMode === 'door-code'
         const title = isDoor ? 'Access Code Required' : this.codeClue.title
-        const body = isDoor 
+        const body = isDoor
             ? `Enter the 4-digit code to unlock this door.\n\nEntered code: ${codePreview}`
             : [this.codeClue.lockedText ?? 'Locked with a code.', '', `Entered code: ${codePreview}`].join('\n')
 
@@ -743,9 +945,7 @@ export default class RoomScene extends Scene {
     }
 
     handleModalChoice(index) {
-        if (this.modalMode === 'final-choice') {
-            this.chooseEnding(index - 1)
-        } else if (this.modalMode === 'quiz') {
+        if (this.modalMode === 'quiz') {
             this.chooseQuizAnswer(index - 1)
         }
     }
@@ -753,44 +953,48 @@ export default class RoomScene extends Scene {
     showSettings() {
         this.showModal(
             'Settings & Controls',
-            [
-                'MUSIC VOLUME',
-                '[Slider Placeholder ----------------]',
-                '',
-                'CONTROLS:',
-                'WASD / Arrows: Move character',
-                'E / Enter: Interact / Next',
-                'F: Open Accusation Menu',
-                'N: Save interview to Notes',
-                'Esc: Close Modal / Notes'
-            ].join('\n'),
-            'Settings saved. Press E or Esc to close.',
+            this.getSettingsText(),
+            'Press E or Esc to close.',
             'settings'
         )
     }
 
-    showFinalChoiceModal() {
+    getSettingsText() {
+        const volume = Math.round((this.state.musicVolume ?? 0.5) * 100)
+        return [
+            `MUSIC VOLUME: ${volume}%`,
+            '',
+            'CONTROLS:',
+            'WASD / Arrows: Move character',
+            'E: Interact / Close modal',
+            'F: Accusation menu',
+            'N: Save interview to NOTES',
+            'ESC: Close modal / NOTES'
+        ].join('\n')
+    }
+
+    showAccusationModal() {
         this.quizAnswers = []
         this.quizStep = 0
         this.showModal(
-            'Detective final decision',
+            'Choose the killer',
             [
-                'You are about to name the killer.',
-                'But first, you must prove your logic.',
+                'Pick a suspect from the portraits.',
                 '',
-                `1. ${ENDING_OPTIONS[0].label}`,
-                `2. ${ENDING_OPTIONS[1].label}`,
-                `3. ${ENDING_OPTIONS[2].label}`,
-                `4. ${ENDING_OPTIONS[3].label}`
+                'After choosing, you must answer 3 questions',
+                'about the case and the clues to confirm',
+                'you actually played the investigation.'
             ].join('\n'),
-            'Press 1, 2, 3, or 4. F or Esc closes.',
-            'final-choice'
+            'Click a portrait to accuse. E / Esc closes.',
+            'accuse'
         )
     }
 
-    chooseEnding(index) {
-        if (this.modalMode !== 'final-choice') return
-        this.pendingEndingIndex = index
+    chooseAccusedSuspect(id) {
+        if (this.modalMode !== 'accuse') return
+        this.pendingAccusedId = id
+        this.quizAnswers = []
+        this.quizStep = 0
         this.startAccusationQuiz()
     }
 
@@ -816,41 +1020,63 @@ export default class RoomScene extends Scene {
         if (this.quizStep < CASE_QUIZ.length) {
             this.startAccusationQuiz()
         } else {
-            const option = ENDING_OPTIONS[this.pendingEndingIndex]
-            const result = resolveEnding(option.id, this.quizAnswers)
-            
-            if (result.id === 'arrest-walter' && canReachTruth()) {
-                this.showMurdererResult(result)
-            } else {
+            const quizCorrect = this.quizAnswers.every((ans, i) => ans === CASE_QUIZ[i].answer)
+
+            if (!quizCorrect) {
                 this.showModal(
-                    result.title,
-                    result.body,
+                    'Interrogation Failed',
+                    'You could not explain key details of the murder. The manor keeps its secret.',
                     'Press E, F, or Esc to return.',
                     'ending'
                 )
+                return
             }
+
+            if (!canReachTruth()) {
+                this.showModal(
+                    'Not Ready Yet',
+                    'You have suspicions, but you still lack crucial evidence. Collect the remaining required clues before the final accusation.',
+                    'Press E, F, or Esc to return.',
+                    'ending'
+                )
+                return
+            }
+
+            const accusedId = this.pendingAccusedId
+            const murdererId = 'walter'
+            const guessCorrect = accusedId === murdererId
+            this.state.solved = guessCorrect
+            this.state.endingId = guessCorrect ? 'accuse-walter' : 'accuse-wrong'
+
+            const truthBody = ENDING_OPTIONS.find(opt => opt.id === 'arrest-walter')?.body
+                ?? 'Walter confesses to everything. The rails, the remote lock, and the knife were all part of his judgment.'
+
+            this.showMurdererResult({ body: truthBody, accusedId, guessCorrect })
             this.updateHeader()
         }
     }
 
-    showMurdererResult(result) {
+    showMurdererResult({ body, accusedId, guessCorrect }) {
         this.showModal(
             'CASE SOLVED',
             '',
             'Press E to close.',
             'murder-reveal'
         )
-        
-        this.modalTitle.setText('THE MURDERER IS')
-        this.modalTitle.setStyle({ color: '#ff0000', fontSize: '32px' })
-        
+
         const suspect = SUSPECTS['walter']
-        this.modalBody.setText(`${suspect.name}\n\n${result.body}`)
-        this.modalBody.setY(220)
-        
+        this.modalTitle.setText('THE MURDER IS')
+        this.modalTitle.setStyle({ color: '#ff0000', fontSize: '32px' })
+
+        const accusedName = SUSPECTS[accusedId]?.name ?? 'Unknown'
+        const verdict = guessCorrect
+            ? `You accused ${accusedName}. Correct.`
+            : `You accused ${accusedName}. Wrong.`
+
+        this.modalBody.setText(`${suspect.name}\n${verdict}\n\n${body}`)
         this.modalMurdererPhoto.setTexture(assetKey(suspect.portrait))
         this.modalMurdererPhoto.setVisible(true)
-        this.modalMurdererPhoto.setY(150)
+        this.layoutOverlay()
     }
 
     showInventoryItem(item) {
@@ -859,32 +1085,51 @@ export default class RoomScene extends Scene {
             item.title,
             `${item.description}\n\n${item.details ?? ''}`,
             'Press E or Esc to close.',
-            'inventory'
+            'inventory',
+            item
         )
     }
 
-    showModal(title, body, footer, mode) {
+    showModal(title, body, footer, mode, extraData = null) {
         this.modalMode = mode
         this.modalTitle.setText(title)
         this.modalBody.setText(body)
         this.modalFooter.setText(footer)
 
+        if (mode !== 'murder-reveal') {
+            this.modalTitle.setStyle({ color: '#20150f', fontSize: '24px' })
+        }
+
         const bodyLength = body.length
-        const fontSize = bodyLength > 1200 ? 10 : bodyLength > 900 ? 11 : bodyLength > 600 ? 12 : 13
-        const lineSpacing = bodyLength > 900 ? 3 : 5
+        const fontSize = bodyLength > 1200 ? 14 : bodyLength > 900 ? 16 : bodyLength > 600 ? 18 : 20
+        const lineSpacing = bodyLength > 900 ? 4 : 6
         this.modalBody.setStyle({
             fontSize: `${fontSize}px`,
             lineSpacing
         })
-        
+
+        if (this.cluePreviewVisible) {
+            this.hideCluePreview()
+        }
+
         this.modalMurdererPhoto.setVisible(false)
-        
-        if (mode === 'quiz') {
-            this.modalBody.setY(130)
-        } else if (mode === 'murder-reveal') {
-            this.modalBody.setY(210)
-        } else {
-            this.modalBody.setY(this.modalTitle.y + 40)
+        this.modalClueImage.setVisible(false)
+        this.modalClueImageBg.setVisible(false)
+        this._modalExtraData = extraData
+
+        // Show clue/suspect image inside the modal
+        if (extraData && (mode === 'clue' || mode === 'inventory' || mode === 'interview')) {
+            let imageKey = null
+            if (mode === 'interview' && extraData.portrait) {
+                imageKey = extraData.portrait
+            } else {
+                imageKey = extraData.visual?.image || extraData.icon
+            }
+            if (imageKey && this.textures.exists(assetKey(imageKey))) {
+                this.modalClueImage.setTexture(assetKey(imageKey))
+                this.modalClueImage.setVisible(true)
+                this.modalClueImageBg.setVisible(true)
+            }
         }
 
         this.modalBackdrop.setVisible(true)
@@ -895,6 +1140,8 @@ export default class RoomScene extends Scene {
         this.modalTitle.setVisible(true)
         this.modalBody.setVisible(true)
         this.modalFooter.setVisible(true)
+
+        this.layoutOverlay()
     }
 
     hideModal() {
@@ -910,6 +1157,19 @@ export default class RoomScene extends Scene {
         this.modalBody.setVisible(false)
         this.modalFooter.setVisible(false)
         this.modalMurdererPhoto.setVisible(false)
+        this.modalClueImage.setVisible(false)
+        this.modalClueImageBg.setVisible(false)
+        this.settingsSliderTrack.setVisible(false)
+        this.settingsSliderFill.setVisible(false)
+        this.settingsSliderHandle.setVisible(false)
+
+        if (this.accuseCards) {
+            this.accuseCards.forEach(card => {
+                card.bg.setVisible(false)
+                card.portrait.setVisible(false)
+                card.label.setVisible(false)
+            })
+        }
     }
 
     toggleNotes(force) {
@@ -977,6 +1237,75 @@ export default class RoomScene extends Scene {
         this.headerTitle.setText(`${this.roomConfig.title.toUpperCase()}${solvedText} | EVIDENCE: ${clueCount}/${CASE_FILE.totalClues}`)
     }
 
+    showCluePreview(clue) {
+        if (!clue || this.cluePreviewVisible) return
+
+        this.cluePreviewVisible = true
+
+        // Check if clue is already collected
+        const alreadyCollected = this.clues.some(c => c.id === clue.id)
+
+        // Set up the preview content
+        this.cluePreviewTitle.setText(clue.title)
+        this.cluePreviewDesc.setText(clue.description)
+        this.cluePreviewDetails.setText(clue.details ?? '')
+
+        // Update hint based on collection status
+        if (alreadyCollected) {
+            this.cluePreviewHint.setText('Already collected • Press E to view again • Esc to close')
+        } else {
+            this.cluePreviewHint.setText('Press E to collect • Esc to close')
+        }
+
+        // Show image if available
+        const imageKey = clue.visual?.image || clue.icon
+        if (imageKey && this.textures.exists(assetKey(imageKey))) {
+            this.cluePreviewImage.setTexture(assetKey(imageKey))
+            this.cluePreviewImage.setVisible(true)
+            this.cluePreviewImageBg.setVisible(true)
+        } else {
+            this.cluePreviewImage.setVisible(false)
+            this.cluePreviewImageBg.setVisible(false)
+        }
+
+        // Show the preview panel
+        this.cluePreviewBackdrop.setVisible(true)
+        this.cluePreviewPaper.setVisible(true)
+        this.cluePreviewTitle.setVisible(true)
+        this.cluePreviewDesc.setVisible(true)
+        this.cluePreviewDetails.setVisible(true)
+        this.cluePreviewHint.setVisible(true)
+
+        // Adjust text positions if image is shown
+        if (imageKey && this.textures.exists(assetKey(imageKey))) {
+            this.cluePreviewTitle.setY(165)
+            this.cluePreviewDesc.setY(200)
+            this.cluePreviewDetails.setY(240)
+            this.cluePreviewHint.setY(340)
+        } else {
+            this.cluePreviewTitle.setY(70)
+            this.cluePreviewDesc.setY(105)
+            this.cluePreviewDetails.setY(150)
+            this.cluePreviewHint.setY(260)
+        }
+
+        this.layoutOverlay()
+    }
+
+    hideCluePreview() {
+        if (!this.cluePreviewVisible) return
+
+        this.cluePreviewVisible = false
+        this.cluePreviewBackdrop.setVisible(false)
+        this.cluePreviewPaper.setVisible(false)
+        this.cluePreviewTitle.setVisible(false)
+        this.cluePreviewDesc.setVisible(false)
+        this.cluePreviewDetails.setVisible(false)
+        this.cluePreviewHint.setVisible(false)
+        this.cluePreviewImage.setVisible(false)
+        this.cluePreviewImageBg.setVisible(false)
+    }
+
     updateInteractionState() {
         this.currentDoor = null
         this.currentClue = null
@@ -1012,12 +1341,8 @@ export default class RoomScene extends Scene {
         })
 
         this.clueObjects.forEach(clue => {
-            const collected = this.clues.includes(clue.id)
             const isNear = now - clue.lastSeenAt <= INTERACTION_WINDOW
-            const locked = clue.requires && !hasAllItems(clue.requires)
-
-            const scaleFactor = isNear && !collected ? 1.1 : 1
-            clue.visual.setScale(clue.baseScale * scaleFactor)
+            clue.visual.setScale(clue.baseScale)
 
             if (!isNear) {
                 return
@@ -1038,8 +1363,7 @@ export default class RoomScene extends Scene {
 
         this.characterObjects.forEach(character => {
             const isNear = now - character.lastSeenAt <= INTERACTION_WINDOW
-            const scaleFactor = isNear ? 1.1 : 1
-            character.sprite.setScale(character.baseScale * scaleFactor)
+            character.sprite.setScale(character.baseScale)
 
             if (!isNear) {
                 return
@@ -1057,15 +1381,36 @@ export default class RoomScene extends Scene {
                 this.currentCharacter = character
             }
         })
+
+        // Auto-show clue preview when near a clue (and not in modal mode)
+        if (this.currentClue && !this.modalMode && !this.cluePreviewVisible) {
+            this.showCluePreview(this.currentClue)
+        } else if ((!this.currentClue || this.modalMode) && this.cluePreviewVisible) {
+            this.hideCluePreview()
+        }
+
+        // Y-sorting
+        this.lia.sprite.setDepth(this.lia.sprite.y)
+        this.clueObjects.forEach(clue => clue.visual.setDepth(clue.visual.y))
+        this.characterObjects.forEach(char => char.sprite.setDepth(char.sprite.y))
+        this.doors.forEach(door => {
+            if (door.sprite) {
+                door.sprite.setDepth(door.y - 10) // Doors usually background
+            }
+        })
+        if (this.officer) this.officer.setDepth(this.officer.y)
+        if (this.ashMarker) this.ashMarker.setDepth(this.ashMarker.y)
     }
 
     updatePrompt() {
-        let text = 'Move: WASD/Arrows. E - interact. F - final decision. NOTES - notebook.'
+        let text = 'Move: WASD/Arrows. E/Enter - interact. F - accusation. NOTES - notebook.'
 
         if (this.modalMode === 'code') {
             text = 'Enter the code and press Enter.'
-        } else if (this.modalMode === 'final-choice') {
-            text = 'Choose an ending with 1, 2, 3, or 4.'
+        } else if (this.modalMode === 'accuse') {
+            text = 'Click a portrait to accuse. E or Esc closes.'
+        } else if (this.modalMode === 'quiz') {
+            text = 'Answer with 1, 2, 3, or 4.'
         } else if (this.modalMode === 'notes') {
             text = 'Notes are saved automatically.'
         } else if (this.modalMode) {
@@ -1083,9 +1428,9 @@ export default class RoomScene extends Scene {
                 ? `${this.currentDoor.label} is locked.`
                 : `E - enter: ${this.currentDoor.label}.`
         } else if (canReachTruth()) {
-            text = 'Truth is established. Press F for final decision.'
+            text = 'Truth is established. Press F for accusation.'
         } else if (canAccuse()) {
-            text = 'You can make a decision, but part of the truth may still be missing. F - final.'
+            text = 'You can accuse someone, but part of the truth may still be missing. F - accuse.'
         }
 
         this.promptText.setText(text)
@@ -1096,29 +1441,33 @@ export default class RoomScene extends Scene {
         this.inventoryElements = []
 
         const items = getInventoryItems()
-        const zoom = this.cameras.main.zoom
+        const camera = this.cameras.main
+        camera.update(0, 0)
+        const zoom = camera.zoom
         const invZoom = 1 / zoom
         const width = this.scale.width
+        const height = this.scale.height
+        const view = camera.worldView
+        const topLeft = { x: view.x, y: view.y }
         const maxVisible = Math.max(6, Math.floor((width - 190 * invZoom) / ((INVENTORY_SLOT_SIZE + 6) * invZoom)))
         const visibleItems = items.slice(Math.max(0, items.length - maxVisible))
-        const startX = 142 * invZoom
-        const y = this.scale.height - 21 * invZoom
+        const startX = topLeft.x + 142 * invZoom
+        const y = topLeft.y + height * invZoom - 21 * invZoom
 
         visibleItems.forEach((item, index) => {
             const x = startX + index * (INVENTORY_SLOT_SIZE + 6) * invZoom
             const slot = this.add.rectangle(x, y, INVENTORY_SLOT_SIZE, INVENTORY_SLOT_SIZE, 0x241a13, 0.96)
                 .setStrokeStyle(1, 0x8d7350, 0.86)
                 .setScrollFactor(0)
-                .setDepth(26)
+                .setDepth(10010)
                 .setScale(invZoom)
                 .setInteractive({ useHandCursor: true })
 
             const iconKey = assetKey(item.icon)
             const icon = this.textures.exists(iconKey)
-                ? this.add.image(x, y, iconKey).setDisplaySize(26 * invZoom, 26 * invZoom)
-                : this.add.rectangle(x, y, 24 * invZoom, 24 * invZoom, 0xd8b56d, 0.9)
-            icon.setScrollFactor(0).setDepth(27)
-            icon.setScale(invZoom)
+                ? this.add.image(x, y, iconKey).setDisplaySize(26, 26)
+                : this.add.rectangle(x, y, 24, 24, 0xd8b56d, 0.9)
+            icon.setScrollFactor(0).setDepth(10011).setScale(invZoom)
 
             slot.on('pointerdown', () => this.showInventoryItem(item))
             icon.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.showInventoryItem(item))
@@ -1128,86 +1477,257 @@ export default class RoomScene extends Scene {
 
         if (items.length > visibleItems.length) {
             const hidden = items.length - visibleItems.length
-            const moreText = this.add.text(width - 54, y, `+${hidden}`, {
+            const moreText = this.add.text(topLeft.x + (width - 54) * invZoom, y, `+${hidden}`, {
                 fontFamily: '"Manrope", Arial, sans-serif',
                 fontSize: '13px',
                 fontStyle: '800',
                 color: '#d8b56d'
-            }).setOrigin(0.5).setScrollFactor(0).setDepth(27)
+            }).setOrigin(0.5).setScrollFactor(0).setDepth(10012).setScale(invZoom)
             this.inventoryElements.push(moreText)
         }
     }
 
     handleResize(gameSize) {
+        this.configureCamera()
+        this.layoutOverlay(gameSize)
+        this.rebuildInventoryBar()
+    }
+
+    layoutOverlay(gameSize = { width: this.scale.width, height: this.scale.height }) {
         const width = gameSize.width
         const height = gameSize.height
+        const camera = this.cameras.main
 
-        this.configureCamera()
+        // Force-update the camera view rect after zoom / center changes (important on resize).
+        camera.update(0, 0)
 
-        this.header.setSize(width, 42)
-        this.inventoryBar.setSize(width, 42)
-        this.inventoryBar.setPosition(0, height)
-        
-        this.accusationButton.setPosition(width - 130, 21)
-        this.accusationText.setPosition(width - 130, 21)
-        this.settingsButton.setPosition(width - 40, 21)
-        this.settingsText.setPosition(width - 40, 21)
-        
-        this.noticeText.setPosition(width - 14, 54)
-        this.promptText.setPosition(14, height - 14)
-
-        this.modalBackdrop.setSize(width, height)
-        this.modalBackdrop.setPosition(width / 2, height / 2)
-        
-        const zoom = this.cameras.main.zoom
+        const zoom = camera.zoom
         const invZoom = 1 / zoom
-        
+        const view = camera.worldView
+        const topLeft = { x: view.x, y: view.y }
+        const center = { x: view.centerX, y: view.centerY }
+
         const uiElements = [
-            this.header, this.headerTitle, this.accusationButton, this.accusationText,
-            this.settingsButton, this.settingsText, this.noticeText, this.promptText,
+            this.header,
+            this.headerTitle,
+            this.accusationButton,
+            this.accusationText,
+            this.settingsButton,
+            this.settingsText,
+            this.notesButton,
+            this.notesText,
+            this.noticeText,
+            this.promptText,
             this.inventoryBar,
-            this.modalShadow, this.modalPaperBack, this.modalFolder,
-            this.modalStamp, this.modalTitle, this.modalBody, this.modalFooter,
-            this.modalMurdererPhoto
+            this.modalBackdrop,
+            this.modalShadow,
+            this.modalPaperBack,
+            this.modalFolder,
+            this.modalStamp,
+            this.modalTitle,
+            this.modalBody,
+            this.modalFooter,
+            this.modalMurdererPhoto,
+            this.settingsSliderTrack,
+            this.settingsSliderFill,
+            this.settingsSliderHandle,
+            this.modalClueImageBg,
+            this.cluePreviewBackdrop,
+            this.cluePreviewPaper,
+            this.cluePreviewTitle,
+            this.cluePreviewDesc,
+            this.cluePreviewDetails,
+            this.cluePreviewHint,
+            this.cluePreviewImageBg
         ]
+
+        if (this.accuseCards) {
+            this.accuseCards.forEach(card => {
+                uiElements.push(card.bg, card.portrait, card.label)
+            })
+        }
         uiElements.forEach(el => el.setScale(invZoom))
 
-        const modalX = width / 2
-        const modalY = height / 2
+        // Header / Footer bars
+        this.header.setPosition(topLeft.x, topLeft.y).setSize(width, 42)
+        this.inventoryBar.setPosition(topLeft.x, topLeft.y + height * invZoom).setSize(width, 42)
 
-        this.modalShadow.setPosition(modalX + 4 * invZoom, modalY + 4 * invZoom)
-        this.modalShadow.setSize(340, 220)
-        this.modalPaperBack.setPosition(modalX, modalY)
-        this.modalPaperBack.setSize(320, 200)
-        this.modalFolder.setPosition(modalX, modalY)
-        this.modalFolder.setSize(310, 190)
-        
-        this.modalStamp.setPosition(modalX, modalY - 70 * invZoom)
-        this.modalTitle.setPosition(modalX, modalY - 50 * invZoom)
-        this.modalBody.setPosition(modalX, modalY - 10 * invZoom)
-        this.modalFooter.setPosition(modalX, modalY + 80 * invZoom)
-        this.modalMurdererPhoto.setPosition(modalX, modalY + 20 * invZoom)
-        
-        this.header.setSize(width * zoom, 42)
-        this.header.setPosition(0, 0)
-        this.inventoryBar.setSize(width * zoom, 42)
-        this.inventoryBar.setPosition(0, height)
+        // Header title
+        this.headerTitle.setPosition(topLeft.x + 14 * invZoom, topLeft.y + 10 * invZoom)
 
-        this.accusationButton.setPosition(width - 130 * invZoom, 21 * invZoom)
-        this.accusationText.setPosition(width - 130 * invZoom, 21 * invZoom)
-        this.settingsButton.setPosition(width - 40 * invZoom, 21 * invZoom)
-        this.settingsText.setPosition(width - 40 * invZoom, 21 * invZoom)
-        
-        this.noticeText.setPosition(width - 14 * invZoom, 54 * invZoom)
-        this.promptText.setPosition(14 * invZoom, height - 14 * invZoom)
+        // Top-right buttons
+        const headerY = topLeft.y + 21 * invZoom
+        this.notesButton.setPosition(topLeft.x + (width - 250) * invZoom, headerY)
+        this.notesText.setPosition(topLeft.x + (width - 250) * invZoom, headerY)
 
-        if (this.notesDom) {
-            const panelWidth = 300
-            const panelHeight = 400
-            this.notesDom.setPosition(width - panelWidth / 2 - 20, height / 2)
+        this.accusationButton.setPosition(topLeft.x + (width - 150) * invZoom, headerY)
+        this.accusationText.setPosition(topLeft.x + (width - 150) * invZoom, headerY)
+
+        this.settingsButton.setPosition(topLeft.x + (width - 60) * invZoom, headerY)
+        this.settingsText.setPosition(topLeft.x + (width - 60) * invZoom, headerY)
+
+        // Prompt and notice
+        this.noticeText.setPosition(topLeft.x + (width - 14) * invZoom, topLeft.y + 54 * invZoom)
+        this.promptText.setPosition(topLeft.x + 14 * invZoom, topLeft.y + (height - 14) * invZoom)
+
+        // Modal layout (responsive)
+        const modalWidth = Math.min(560, Math.max(320, width - 80))
+        const modalHeight = Math.min(380, Math.max(240, height - 140))
+
+        this.modalBackdrop.setPosition(center.x, center.y).setSize(width, height)
+
+        this.modalShadow.setPosition(center.x + 4 * invZoom, center.y + 4 * invZoom).setSize(modalWidth, modalHeight)
+        this.modalPaperBack.setPosition(center.x, center.y).setSize(modalWidth - 20, modalHeight - 20)
+        this.modalFolder.setPosition(center.x, center.y).setSize(modalWidth - 30, modalHeight - 30)
+
+        const modalTop = center.y - (modalHeight / 2) * invZoom
+        const modalBottom = center.y + (modalHeight / 2) * invZoom
+
+        this.modalStamp.setPosition(center.x, modalTop + 20 * invZoom)
+        this.modalTitle.setPosition(center.x, modalTop + 44 * invZoom)
+        this.modalFooter.setPosition(center.x, modalBottom - 18 * invZoom)
+
+        // Body and special modes
+        const bodyTop = modalTop + 84 * invZoom
+        const bodyBottom = modalBottom - 44 * invZoom
+
+        if (this.modalMode === 'murder-reveal') {
+            const photoY = bodyTop + 34 * invZoom
+            this.modalMurdererPhoto.setPosition(center.x, photoY)
+            this.modalBody.setPosition(center.x, photoY + 58 * invZoom)
+        } else if (this.modalMode === 'settings') {
+            this.modalBody.setPosition(center.x, bodyTop + 64 * invZoom)
+        } else if (this.modalClueImage.visible) {
+            // Clue / Interview / Inventory image display
+            const isInterview = this.modalMode === 'interview'
+
+            // Larger image sizes for a cooler presentation
+            const imgW = isInterview ? 76 : 86
+            const imgH = isInterview ? 116 : 86
+
+            this.modalClueImage.setDisplaySize(imgW * invZoom, imgH * invZoom)
+
+            // Polaroid-like background frame
+            this.modalClueImageBg.setSize(imgW + 14, imgH + 28)
+
+            // Adjust photoY so it sits prominently below the title
+            const photoY = bodyTop + (imgH / 2 + 10) * invZoom
+
+            this.modalClueImageBg.setPosition(center.x, photoY)
+            this.modalClueImage.setPosition(center.x, photoY - 6 * invZoom)
+
+            this.modalBody.setPosition(center.x, photoY + (imgH / 2 + 24) * invZoom)
+        } else {
+            this.modalBody.setPosition(center.x, bodyTop)
         }
 
-        this.rebuildInventoryBar()
+        if (this.accuseCards) {
+            const show = this.modalMode === 'accuse'
+            this.accuseCards.forEach(card => {
+                card.bg.setVisible(show)
+                card.portrait.setVisible(show)
+                card.label.setVisible(show)
+            })
+
+            if (show) {
+                const cols = 3
+                const cellW = 96
+                const cellH = 106
+                const gridTop = bodyTop + 8 * invZoom
+                const startX = center.x - ((cols - 1) * cellW * 0.5) * invZoom
+
+                this.accuseCards.forEach((card, idx) => {
+                    const col = idx % cols
+                    const row = Math.floor(idx / cols)
+                    const x = startX + col * cellW * invZoom
+                    const y = gridTop + row * cellH * invZoom
+
+                    card.bg.setPosition(x, y).setSize(84, 92)
+                    card.portrait.setPosition(x, y - 8 * invZoom).setDisplaySize(46, 68)
+                    card.label.setPosition(x, y + 40 * invZoom)
+                })
+            }
+        }
+
+        const wrapWidth = Math.max(260, modalWidth - 70)
+        this.modalTitle.setWordWrapWidth(wrapWidth)
+        this.modalBody.setWordWrapWidth(wrapWidth)
+        this.modalFooter.setWordWrapWidth(modalWidth - 40)
+
+        // Notes panel (DOM)
+        if (this.notesDom) {
+            const panelWidth = 320
+            const x = camera.getWorldPoint(width - 20 - panelWidth / 2, height / 2).x
+            const y = camera.getWorldPoint(width - 20 - panelWidth / 2, height / 2).y
+            this.notesDom.setPosition(x, y)
+            this.notesDom.setScale(invZoom)
+        }
+
+        // Settings slider position
+        if (this.modalMode === 'settings') {
+            const sliderY = bodyTop + 34 * invZoom
+            const sliderWidth = Math.min(260, modalWidth - 120)
+            const left = center.x - (sliderWidth / 2) * invZoom
+
+            this.settingsSliderBounds = {
+                leftWorld: left,
+                widthWorld: sliderWidth * invZoom,
+                widthPx: sliderWidth,
+                yWorld: sliderY
+            }
+
+            this.settingsSliderTrack
+                .setPosition(center.x, sliderY)
+                .setSize(sliderWidth, 10)
+                .setVisible(true)
+
+            this.settingsSliderFill.setSize(sliderWidth, 10).setVisible(true)
+            this.settingsSliderHandle.setVisible(true)
+            this.updateSettingsSlider()
+        } else {
+            this.settingsSliderBounds = null
+            this.settingsSliderTrack.setVisible(false)
+            this.settingsSliderFill.setVisible(false)
+            this.settingsSliderHandle.setVisible(false)
+        }
+
+        // Clue preview panel layout
+        if (this.cluePreviewVisible) {
+            const previewWidth = Math.min(520, Math.max(340, width - 60))
+            const previewHeight = Math.min(340, Math.max(260, height - 160))
+
+            this.cluePreviewBackdrop.setPosition(center.x, center.y).setSize(width, height)
+            this.cluePreviewPaper.setPosition(center.x, center.y).setSize(previewWidth - 40, previewHeight - 40)
+
+            const previewTop = center.y - (previewHeight / 2) * invZoom
+            const previewCenter = previewTop + (previewHeight / 2) * invZoom
+
+            const hasImage = this.cluePreviewImage.visible
+            if (hasImage) {
+                const imgW = 80
+                const imgH = 80
+                const photoY = previewTop + (imgH / 2 + 20) * invZoom
+
+                this.cluePreviewImageBg.setPosition(center.x, photoY).setSize(imgW + 14, imgH + 28)
+                this.cluePreviewImage.setPosition(center.x, photoY - 4 * invZoom).setDisplaySize(imgW * invZoom, imgH * invZoom)
+
+                this.cluePreviewTitle.setPosition(center.x, photoY + (imgH / 2 + 30) * invZoom)
+                this.cluePreviewDesc.setPosition(center.x, photoY + (imgH / 2 + 65) * invZoom)
+                this.cluePreviewDetails.setPosition(center.x, photoY + (imgH / 2 + 115) * invZoom)
+                this.cluePreviewHint.setPosition(center.x, previewTop + previewHeight * invZoom - 24 * invZoom)
+            } else {
+                this.cluePreviewTitle.setPosition(center.x, previewTop + 30 * invZoom)
+                this.cluePreviewDesc.setPosition(center.x, previewTop + 75 * invZoom)
+                this.cluePreviewDetails.setPosition(center.x, previewTop + 125 * invZoom)
+                this.cluePreviewHint.setPosition(center.x, previewTop + previewHeight * invZoom - 24 * invZoom)
+            }
+
+            // Update word wrap widths
+            const previewWrapWidth = Math.max(300, previewWidth - 60)
+            this.cluePreviewTitle.setWordWrapWidth(previewWrapWidth)
+            this.cluePreviewDesc.setWordWrapWidth(previewWrapWidth)
+            this.cluePreviewDetails.setWordWrapWidth(previewWrapWidth)
+        }
     }
 
     movePlayer() {

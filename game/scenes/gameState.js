@@ -1,8 +1,8 @@
 const STORAGE_NOTES_KEY = 'blackwood-manor-notes-v2'
 
 export const CASE_FILE = {
-    title: 'Angel of the Blackwood Manor',
-    caseName: 'Angel of the\nBlackwood Manor',
+    title: 'Mystery of the Blackwood Manor',
+    caseName: 'Mystery of the\nBlackwood Manor',
     victim: 'Arthur Blackwood, 58',
     culprit: 'Walter Blackwood',
     accusationThreshold: 18,

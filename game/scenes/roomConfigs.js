@@ -219,9 +219,9 @@ export const roomConfigs = {
                 details: 'He was stabbed from behind. The time of death was between 20:15 and 20:55.',
                 icon: 'characters/deadbody.png',
                 x: 240,
-                y: 200,
-                width: 60,
-                height: 30,
+                y: 180,
+                width: 36,
+                height: 18,
                 visual: { type: 'image', image: 'characters/deadbody.png' }
             },
             {
@@ -231,10 +231,10 @@ export const roomConfigs = {
                 description: 'A tiny gold key found inside Arthur\'s pocket watch.',
                 details: 'It might open a small compartment.',
                 icon: 'decor/clock.png',
-                x: 160,
-                y: 210,
-                width: 40,
-                height: 30,
+                x: 180,
+                y: 160,
+                width: 28,
+                height: 28,
                 visual: { type: 'image', image: 'decor/clock.png' }
             },
             {
@@ -245,10 +245,10 @@ export const roomConfigs = {
                 details: 'The code is 8241 (Death time 20:41 + Date of death).',
                 code: '8241',
                 icon: 'random/door2.png',
-                x: 374,
-                y: 220,
-                width: 60,
-                height: 40,
+                x: 340,
+                y: 210,
+                width: 32,
+                height: 32,
                 visual: { type: 'image', image: 'random/door2.png' }
             },
             {
@@ -483,11 +483,11 @@ export const roomConfigs = {
                 description: 'A small glass useful for inspecting tiny details.',
                 details: 'Use it on the "Deer in the Forest" painting.',
                 icon: 'bathroom/mirror.png',
-                x: 240,
-                y: 148,
-                width: 40,
-                height: 30,
-                visual: { type: 'image', image: 'bathroom/mirror.png' }
+                x: 411,
+                y: 73,
+                width: 42,
+                height: 38,
+                visual: { type: 'image', image: 'decor/mirror.png' }
             },
             {
                 id: 'microfilm-deer',
@@ -497,10 +497,10 @@ export const roomConfigs = {
                 details: 'The microfilm shows a police report from Daniel Gray\'s crash. The car belonged to Arthur.',
                 requires: ['magnifier'],
                 icon: 'decor/picture3.png',
-                x: 394,
-                y: 74,
-                width: 60,
-                height: 40,
+                x: 245,
+                y: 57,
+                width: 38,
+                height: 30,
                 visual: { type: 'image', image: 'decor/picture3.png' }
             },
             {
